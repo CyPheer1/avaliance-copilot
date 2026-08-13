@@ -1,0 +1,27 @@
+{
+  "id": "mission-088",
+  "title": "Mission synthétique 088 - data et BI dans le secteur télécom",
+  "sector": "télécom",
+  "mission_type": "data et BI",
+  "technologies": [
+    "Kubernetes",
+    "FastAPI",
+    "Python"
+  ],
+  "year": 2023,
+  "referent_tag": "référent-fictif-04",
+  "summary": "Cette mission fictive concerne un acteur anonyme du secteur télécom. L'équipe a conduit une data et BI avec Kubernetes, FastAPI, Python. La solution a amélioré la fiabilité, la sécurité et la maîtrise des délais, sans utiliser de donnée client réelle.",
+  "synthetic": true,
+  "documents": [
+    {
+      "chunk_index": 0,
+      "kind": "contexte projet",
+      "content": "Contexte projet fictif de la mission 088. Dans le secteur télécom, la data et BI repose sur Kubernetes, FastAPI, Python. Le scénario décrit des ateliers, des choix techniques et des résultats entièrement synthétiques destinés à une démonstration hors ligne."
+    },
+    {
+      "chunk_index": 1,
+      "kind": "note d'architecture",
+      "content": "Note d'architecture fictif de la mission 088. Dans le secteur télécom, la data et BI repose sur Kubernetes, FastAPI, Python. Le scénario décrit des ateliers, des choix techniques et des résultats entièrement synthétiques destinés à une démonstration hors ligne."
+    }
+  ]
+}

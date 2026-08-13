@@ -1,0 +1,32 @@
+{
+  "id": "mission-053",
+  "title": "Mission synthétique 053 - modernisation applicative dans le secteur télécom",
+  "sector": "télécom",
+  "mission_type": "modernisation applicative",
+  "technologies": [
+    "Python",
+    "FastAPI",
+    "Kubernetes"
+  ],
+  "year": 2024,
+  "referent_tag": "référent-fictif-05",
+  "summary": "Cette mission fictive concerne un acteur anonyme du secteur télécom. L'équipe a conduit une modernisation applicative avec Python, FastAPI, Kubernetes. La solution a amélioré la fiabilité, la sécurité et la maîtrise des délais, sans utiliser de donnée client réelle.",
+  "synthetic": true,
+  "documents": [
+    {
+      "chunk_index": 0,
+      "kind": "contexte projet",
+      "content": "Contexte projet fictif de la mission 053. Dans le secteur télécom, la modernisation applicative repose sur Python, FastAPI, Kubernetes. Le scénario décrit des ateliers, des choix techniques et des résultats entièrement synthétiques destinés à une démonstration hors ligne."
+    },
+    {
+      "chunk_index": 1,
+      "kind": "note d'architecture",
+      "content": "Note d'architecture fictif de la mission 053. Dans le secteur télécom, la modernisation applicative repose sur Python, FastAPI, Kubernetes. Le scénario décrit des ateliers, des choix techniques et des résultats entièrement synthétiques destinés à une démonstration hors ligne."
+    },
+    {
+      "chunk_index": 2,
+      "kind": "retour d'expérience",
+      "content": "Retour d'expérience fictif de la mission 053. Dans le secteur télécom, la modernisation applicative repose sur Python, FastAPI, Kubernetes. Le scénario décrit des ateliers, des choix techniques et des résultats entièrement synthétiques destinés à une démonstration hors ligne."
+    }
+  ]
+}

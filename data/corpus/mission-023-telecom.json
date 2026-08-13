@@ -1,0 +1,32 @@
+{
+  "id": "mission-023",
+  "title": "Mission synthétique 023 - DevOps dans le secteur télécom",
+  "sector": "télécom",
+  "mission_type": "DevOps",
+  "technologies": [
+    "FastAPI",
+    "Python",
+    "Kubernetes"
+  ],
+  "year": 2024,
+  "referent_tag": "référent-fictif-11",
+  "summary": "Cette mission fictive concerne un acteur anonyme du secteur télécom. L'équipe a conduit une DevOps avec FastAPI, Python, Kubernetes. La solution a amélioré la fiabilité, la sécurité et la maîtrise des délais, sans utiliser de donnée client réelle.",
+  "synthetic": true,
+  "documents": [
+    {
+      "chunk_index": 0,
+      "kind": "contexte projet",
+      "content": "Contexte projet fictif de la mission 023. Dans le secteur télécom, la DevOps repose sur FastAPI, Python, Kubernetes. Le scénario décrit des ateliers, des choix techniques et des résultats entièrement synthétiques destinés à une démonstration hors ligne."
+    },
+    {
+      "chunk_index": 1,
+      "kind": "note d'architecture",
+      "content": "Note d'architecture fictif de la mission 023. Dans le secteur télécom, la DevOps repose sur FastAPI, Python, Kubernetes. Le scénario décrit des ateliers, des choix techniques et des résultats entièrement synthétiques destinés à une démonstration hors ligne."
+    },
+    {
+      "chunk_index": 2,
+      "kind": "retour d'expérience",
+      "content": "Retour d'expérience fictif de la mission 023. Dans le secteur télécom, la DevOps repose sur FastAPI, Python, Kubernetes. Le scénario décrit des ateliers, des choix techniques et des résultats entièrement synthétiques destinés à une démonstration hors ligne."
+    }
+  ]
+}

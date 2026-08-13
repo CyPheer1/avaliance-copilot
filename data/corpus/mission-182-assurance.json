@@ -1,0 +1,32 @@
+{
+  "id": "mission-182",
+  "title": "Mission synthétique 182 - migration cloud dans le secteur assurance",
+  "sector": "assurance",
+  "mission_type": "migration cloud",
+  "technologies": [
+    "Azure",
+    "TypeScript",
+    "React"
+  ],
+  "year": 2021,
+  "referent_tag": "référent-fictif-02",
+  "summary": "Cette mission fictive concerne un acteur anonyme du secteur assurance. L'équipe a conduit une migration cloud avec Azure, TypeScript, React. La solution a amélioré la fiabilité, la sécurité et la maîtrise des délais, sans utiliser de donnée client réelle.",
+  "synthetic": true,
+  "documents": [
+    {
+      "chunk_index": 0,
+      "kind": "contexte projet",
+      "content": "Contexte projet fictif de la mission 182. Dans le secteur assurance, la migration cloud repose sur Azure, TypeScript, React. Le scénario décrit des ateliers, des choix techniques et des résultats entièrement synthétiques destinés à une démonstration hors ligne."
+    },
+    {
+      "chunk_index": 1,
+      "kind": "note d'architecture",
+      "content": "Note d'architecture fictif de la mission 182. Dans le secteur assurance, la migration cloud repose sur Azure, TypeScript, React. Le scénario décrit des ateliers, des choix techniques et des résultats entièrement synthétiques destinés à une démonstration hors ligne."
+    },
+    {
+      "chunk_index": 2,
+      "kind": "retour d'expérience",
+      "content": "Retour d'expérience fictif de la mission 182. Dans le secteur assurance, la migration cloud repose sur Azure, TypeScript, React. Le scénario décrit des ateliers, des choix techniques et des résultats entièrement synthétiques destinés à une démonstration hors ligne."
+    }
+  ]
+}

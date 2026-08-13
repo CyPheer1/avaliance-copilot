@@ -1,0 +1,32 @@
+{
+  "id": "mission-293",
+  "title": "Mission synthétique 293 - cybersécurité dans le secteur télécom",
+  "sector": "télécom",
+  "mission_type": "cybersécurité",
+  "technologies": [
+    "Kubernetes",
+    "Python",
+    "FastAPI"
+  ],
+  "year": 2024,
+  "referent_tag": "référent-fictif-05",
+  "summary": "Cette mission fictive concerne un acteur anonyme du secteur télécom. L'équipe a conduit une cybersécurité avec Kubernetes, Python, FastAPI. La solution a amélioré la fiabilité, la sécurité et la maîtrise des délais, sans utiliser de donnée client réelle.",
+  "synthetic": true,
+  "documents": [
+    {
+      "chunk_index": 0,
+      "kind": "contexte projet",
+      "content": "Contexte projet fictif de la mission 293. Dans le secteur télécom, la cybersécurité repose sur Kubernetes, Python, FastAPI. Le scénario décrit des ateliers, des choix techniques et des résultats entièrement synthétiques destinés à une démonstration hors ligne."
+    },
+    {
+      "chunk_index": 1,
+      "kind": "note d'architecture",
+      "content": "Note d'architecture fictif de la mission 293. Dans le secteur télécom, la cybersécurité repose sur Kubernetes, Python, FastAPI. Le scénario décrit des ateliers, des choix techniques et des résultats entièrement synthétiques destinés à une démonstration hors ligne."
+    },
+    {
+      "chunk_index": 2,
+      "kind": "retour d'expérience",
+      "content": "Retour d'expérience fictif de la mission 293. Dans le secteur télécom, la cybersécurité repose sur Kubernetes, Python, FastAPI. Le scénario décrit des ateliers, des choix techniques et des résultats entièrement synthétiques destinés à une démonstration hors ligne."
+    }
+  ]
+}

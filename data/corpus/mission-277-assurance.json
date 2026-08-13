@@ -1,0 +1,27 @@
+{
+  "id": "mission-277",
+  "title": "Mission synthétique 277 - modernisation applicative dans le secteur assurance",
+  "sector": "assurance",
+  "mission_type": "modernisation applicative",
+  "technologies": [
+    "React",
+    "Azure",
+    "TypeScript"
+  ],
+  "year": 2020,
+  "referent_tag": "référent-fictif-01",
+  "summary": "Cette mission fictive concerne un acteur anonyme du secteur assurance. L'équipe a conduit une modernisation applicative avec React, Azure, TypeScript. La solution a amélioré la fiabilité, la sécurité et la maîtrise des délais, sans utiliser de donnée client réelle.",
+  "synthetic": true,
+  "documents": [
+    {
+      "chunk_index": 0,
+      "kind": "contexte projet",
+      "content": "Contexte projet fictif de la mission 277. Dans le secteur assurance, la modernisation applicative repose sur React, Azure, TypeScript. Le scénario décrit des ateliers, des choix techniques et des résultats entièrement synthétiques destinés à une démonstration hors ligne."
+    },
+    {
+      "chunk_index": 1,
+      "kind": "note d'architecture",
+      "content": "Note d'architecture fictif de la mission 277. Dans le secteur assurance, la modernisation applicative repose sur React, Azure, TypeScript. Le scénario décrit des ateliers, des choix techniques et des résultats entièrement synthétiques destinés à une démonstration hors ligne."
+    }
+  ]
+}

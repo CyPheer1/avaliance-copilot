@@ -1,0 +1,32 @@
+{
+  "id": "mission-185",
+  "title": "Mission synthétique 185 - migration cloud dans le secteur énergie",
+  "sector": "énergie",
+  "mission_type": "migration cloud",
+  "technologies": [
+    "Spark",
+    "Kafka",
+    "Power BI"
+  ],
+  "year": 2024,
+  "referent_tag": "référent-fictif-05",
+  "summary": "Cette mission fictive concerne un acteur anonyme du secteur énergie. L'équipe a conduit une migration cloud avec Spark, Kafka, Power BI. La solution a amélioré la fiabilité, la sécurité et la maîtrise des délais, sans utiliser de donnée client réelle.",
+  "synthetic": true,
+  "documents": [
+    {
+      "chunk_index": 0,
+      "kind": "contexte projet",
+      "content": "Contexte projet fictif de la mission 185. Dans le secteur énergie, la migration cloud repose sur Spark, Kafka, Power BI. Le scénario décrit des ateliers, des choix techniques et des résultats entièrement synthétiques destinés à une démonstration hors ligne."
+    },
+    {
+      "chunk_index": 1,
+      "kind": "note d'architecture",
+      "content": "Note d'architecture fictif de la mission 185. Dans le secteur énergie, la migration cloud repose sur Spark, Kafka, Power BI. Le scénario décrit des ateliers, des choix techniques et des résultats entièrement synthétiques destinés à une démonstration hors ligne."
+    },
+    {
+      "chunk_index": 2,
+      "kind": "retour d'expérience",
+      "content": "Retour d'expérience fictif de la mission 185. Dans le secteur énergie, la migration cloud repose sur Spark, Kafka, Power BI. Le scénario décrit des ateliers, des choix techniques et des résultats entièrement synthétiques destinés à une démonstration hors ligne."
+    }
+  ]
+}

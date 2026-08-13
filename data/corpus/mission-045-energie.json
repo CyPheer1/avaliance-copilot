@@ -1,0 +1,37 @@
+{
+  "id": "mission-045",
+  "title": "Mission synthétique 045 - cybersécurité dans le secteur énergie",
+  "sector": "énergie",
+  "mission_type": "cybersécurité",
+  "technologies": [
+    "Power BI",
+    "Spark",
+    "Kafka"
+  ],
+  "year": 2022,
+  "referent_tag": "référent-fictif-09",
+  "summary": "Cette mission fictive concerne un acteur anonyme du secteur énergie. L'équipe a conduit une cybersécurité avec Power BI, Spark, Kafka. La solution a amélioré la fiabilité, la sécurité et la maîtrise des délais, sans utiliser de donnée client réelle.",
+  "synthetic": true,
+  "documents": [
+    {
+      "chunk_index": 0,
+      "kind": "contexte projet",
+      "content": "Contexte projet fictif de la mission 045. Dans le secteur énergie, la cybersécurité repose sur Power BI, Spark, Kafka. Le scénario décrit des ateliers, des choix techniques et des résultats entièrement synthétiques destinés à une démonstration hors ligne."
+    },
+    {
+      "chunk_index": 1,
+      "kind": "note d'architecture",
+      "content": "Note d'architecture fictif de la mission 045. Dans le secteur énergie, la cybersécurité repose sur Power BI, Spark, Kafka. Le scénario décrit des ateliers, des choix techniques et des résultats entièrement synthétiques destinés à une démonstration hors ligne."
+    },
+    {
+      "chunk_index": 2,
+      "kind": "retour d'expérience",
+      "content": "Retour d'expérience fictif de la mission 045. Dans le secteur énergie, la cybersécurité repose sur Power BI, Spark, Kafka. Le scénario décrit des ateliers, des choix techniques et des résultats entièrement synthétiques destinés à une démonstration hors ligne."
+    },
+    {
+      "chunk_index": 3,
+      "kind": "extrait de proposition",
+      "content": "Extrait de proposition fictif de la mission 045. Dans le secteur énergie, la cybersécurité repose sur Power BI, Spark, Kafka. Le scénario décrit des ateliers, des choix techniques et des résultats entièrement synthétiques destinés à une démonstration hors ligne."
+    }
+  ]
+}

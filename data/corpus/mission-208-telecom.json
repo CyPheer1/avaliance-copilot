@@ -1,0 +1,27 @@
+{
+  "id": "mission-208",
+  "title": "Mission synthétique 208 - migration cloud dans le secteur télécom",
+  "sector": "télécom",
+  "mission_type": "migration cloud",
+  "technologies": [
+    "Python",
+    "Kubernetes",
+    "FastAPI"
+  ],
+  "year": 2023,
+  "referent_tag": "référent-fictif-04",
+  "summary": "Cette mission fictive concerne un acteur anonyme du secteur télécom. L'équipe a conduit une migration cloud avec Python, Kubernetes, FastAPI. La solution a amélioré la fiabilité, la sécurité et la maîtrise des délais, sans utiliser de donnée client réelle.",
+  "synthetic": true,
+  "documents": [
+    {
+      "chunk_index": 0,
+      "kind": "contexte projet",
+      "content": "Contexte projet fictif de la mission 208. Dans le secteur télécom, la migration cloud repose sur Python, Kubernetes, FastAPI. Le scénario décrit des ateliers, des choix techniques et des résultats entièrement synthétiques destinés à une démonstration hors ligne."
+    },
+    {
+      "chunk_index": 1,
+      "kind": "note d'architecture",
+      "content": "Note d'architecture fictif de la mission 208. Dans le secteur télécom, la migration cloud repose sur Python, Kubernetes, FastAPI. Le scénario décrit des ateliers, des choix techniques et des résultats entièrement synthétiques destinés à une démonstration hors ligne."
+    }
+  ]
+}

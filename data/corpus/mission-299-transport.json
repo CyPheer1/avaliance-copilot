@@ -1,0 +1,32 @@
+{
+  "id": "mission-299",
+  "title": "Mission synthétique 299 - DevOps dans le secteur transport",
+  "sector": "transport",
+  "mission_type": "DevOps",
+  "technologies": [
+    "GitLab CI",
+    "Terraform",
+    "Docker"
+  ],
+  "year": 2024,
+  "referent_tag": "référent-fictif-11",
+  "summary": "Cette mission fictive concerne un acteur anonyme du secteur transport. L'équipe a conduit une DevOps avec GitLab CI, Terraform, Docker. La solution a amélioré la fiabilité, la sécurité et la maîtrise des délais, sans utiliser de donnée client réelle.",
+  "synthetic": true,
+  "documents": [
+    {
+      "chunk_index": 0,
+      "kind": "contexte projet",
+      "content": "Contexte projet fictif de la mission 299. Dans le secteur transport, la DevOps repose sur GitLab CI, Terraform, Docker. Le scénario décrit des ateliers, des choix techniques et des résultats entièrement synthétiques destinés à une démonstration hors ligne."
+    },
+    {
+      "chunk_index": 1,
+      "kind": "note d'architecture",
+      "content": "Note d'architecture fictif de la mission 299. Dans le secteur transport, la DevOps repose sur GitLab CI, Terraform, Docker. Le scénario décrit des ateliers, des choix techniques et des résultats entièrement synthétiques destinés à une démonstration hors ligne."
+    },
+    {
+      "chunk_index": 2,
+      "kind": "retour d'expérience",
+      "content": "Retour d'expérience fictif de la mission 299. Dans le secteur transport, la DevOps repose sur GitLab CI, Terraform, Docker. Le scénario décrit des ateliers, des choix techniques et des résultats entièrement synthétiques destinés à une démonstration hors ligne."
+    }
+  ]
+}

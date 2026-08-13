@@ -1,0 +1,1 @@
+"""Grounded generation through the local Ollama service."""

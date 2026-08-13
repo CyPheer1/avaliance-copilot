@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "mode": "templates",
+  "seed": 42,
+  "mission_count": 300,
+  "document_count": 900,
+  "sectors": [
+    "assurance",
+    "banque",
+    "transport",
+    "télécom",
+    "énergie"
+  ],
+  "mission_types": [
+    "DevOps",
+    "cybersécurité",
+    "data et BI",
+    "migration cloud",
+    "modernisation applicative"
+  ],
+  "synthetic": true
+}

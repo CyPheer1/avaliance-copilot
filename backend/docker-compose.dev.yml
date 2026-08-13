@@ -1,0 +1,28 @@
+# =============================================================================
+# BACKEND-ONLY development convenience (PostgreSQL for local Maven runs).
+# This file is NOT the root orchestration. Use the root docker-compose.yml
+# for the full project stack (postgres + ollama + application services).
+# =============================================================================
+version: '3.8'
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: avaliance_postgres_dev
+    environment:
+      POSTGRES_USER: ${DB_USERNAME:-copilot}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-copilot_dev_pass}
+      POSTGRES_DB: ${DB_NAME:-avaliance}
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata_dev:/var/lib/postgresql/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME:-copilot} -d ${DB_NAME:-avaliance}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  pgdata_dev:

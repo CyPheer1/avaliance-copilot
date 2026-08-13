@@ -1,0 +1,27 @@
+{
+  "id": "mission-295",
+  "title": "Mission synthétique 295 - cybersécurité dans le secteur énergie",
+  "sector": "énergie",
+  "mission_type": "cybersécurité",
+  "technologies": [
+    "Kafka",
+    "Power BI",
+    "Spark"
+  ],
+  "year": 2020,
+  "referent_tag": "référent-fictif-07",
+  "summary": "Cette mission fictive concerne un acteur anonyme du secteur énergie. L'équipe a conduit une cybersécurité avec Kafka, Power BI, Spark. La solution a amélioré la fiabilité, la sécurité et la maîtrise des délais, sans utiliser de donnée client réelle.",
+  "synthetic": true,
+  "documents": [
+    {
+      "chunk_index": 0,
+      "kind": "contexte projet",
+      "content": "Contexte projet fictif de la mission 295. Dans le secteur énergie, la cybersécurité repose sur Kafka, Power BI, Spark. Le scénario décrit des ateliers, des choix techniques et des résultats entièrement synthétiques destinés à une démonstration hors ligne."
+    },
+    {
+      "chunk_index": 1,
+      "kind": "note d'architecture",
+      "content": "Note d'architecture fictif de la mission 295. Dans le secteur énergie, la cybersécurité repose sur Kafka, Power BI, Spark. Le scénario décrit des ateliers, des choix techniques et des résultats entièrement synthétiques destinés à une démonstration hors ligne."
+    }
+  ]
+}

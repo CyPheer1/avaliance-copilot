@@ -1,0 +1,27 @@
+{
+  "id": "mission-289",
+  "title": "Mission synthétique 289 - data et BI dans le secteur transport",
+  "sector": "transport",
+  "mission_type": "data et BI",
+  "technologies": [
+    "GitLab CI",
+    "Terraform",
+    "Docker"
+  ],
+  "year": 2020,
+  "referent_tag": "référent-fictif-01",
+  "summary": "Cette mission fictive concerne un acteur anonyme du secteur transport. L'équipe a conduit une data et BI avec GitLab CI, Terraform, Docker. La solution a amélioré la fiabilité, la sécurité et la maîtrise des délais, sans utiliser de donnée client réelle.",
+  "synthetic": true,
+  "documents": [
+    {
+      "chunk_index": 0,
+      "kind": "contexte projet",
+      "content": "Contexte projet fictif de la mission 289. Dans le secteur transport, la data et BI repose sur GitLab CI, Terraform, Docker. Le scénario décrit des ateliers, des choix techniques et des résultats entièrement synthétiques destinés à une démonstration hors ligne."
+    },
+    {
+      "chunk_index": 1,
+      "kind": "note d'architecture",
+      "content": "Note d'architecture fictif de la mission 289. Dans le secteur transport, la data et BI repose sur GitLab CI, Terraform, Docker. Le scénario décrit des ateliers, des choix techniques et des résultats entièrement synthétiques destinés à une démonstration hors ligne."
+    }
+  ]
+}

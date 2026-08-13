@@ -1,0 +1,27 @@
+{
+  "id": "mission-280",
+  "title": "Mission synthétique 280 - modernisation applicative dans le secteur énergie",
+  "sector": "énergie",
+  "mission_type": "modernisation applicative",
+  "technologies": [
+    "Kafka",
+    "Power BI",
+    "Spark"
+  ],
+  "year": 2023,
+  "referent_tag": "référent-fictif-04",
+  "summary": "Cette mission fictive concerne un acteur anonyme du secteur énergie. L'équipe a conduit une modernisation applicative avec Kafka, Power BI, Spark. La solution a amélioré la fiabilité, la sécurité et la maîtrise des délais, sans utiliser de donnée client réelle.",
+  "synthetic": true,
+  "documents": [
+    {
+      "chunk_index": 0,
+      "kind": "contexte projet",
+      "content": "Contexte projet fictif de la mission 280. Dans le secteur énergie, la modernisation applicative repose sur Kafka, Power BI, Spark. Le scénario décrit des ateliers, des choix techniques et des résultats entièrement synthétiques destinés à une démonstration hors ligne."
+    },
+    {
+      "chunk_index": 1,
+      "kind": "note d'architecture",
+      "content": "Note d'architecture fictif de la mission 280. Dans le secteur énergie, la modernisation applicative repose sur Kafka, Power BI, Spark. Le scénario décrit des ateliers, des choix techniques et des résultats entièrement synthétiques destinés à une démonstration hors ligne."
+    }
+  ]
+}

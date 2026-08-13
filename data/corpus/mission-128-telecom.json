@@ -1,0 +1,32 @@
+{
+  "id": "mission-128",
+  "title": "Mission synthétique 128 - modernisation applicative dans le secteur télécom",
+  "sector": "télécom",
+  "mission_type": "modernisation applicative",
+  "technologies": [
+    "Kubernetes",
+    "FastAPI",
+    "Python"
+  ],
+  "year": 2021,
+  "referent_tag": "référent-fictif-08",
+  "summary": "Cette mission fictive concerne un acteur anonyme du secteur télécom. L'équipe a conduit une modernisation applicative avec Kubernetes, FastAPI, Python. La solution a amélioré la fiabilité, la sécurité et la maîtrise des délais, sans utiliser de donnée client réelle.",
+  "synthetic": true,
+  "documents": [
+    {
+      "chunk_index": 0,
+      "kind": "contexte projet",
+      "content": "Contexte projet fictif de la mission 128. Dans le secteur télécom, la modernisation applicative repose sur Kubernetes, FastAPI, Python. Le scénario décrit des ateliers, des choix techniques et des résultats entièrement synthétiques destinés à une démonstration hors ligne."
+    },
+    {
+      "chunk_index": 1,
+      "kind": "note d'architecture",
+      "content": "Note d'architecture fictif de la mission 128. Dans le secteur télécom, la modernisation applicative repose sur Kubernetes, FastAPI, Python. Le scénario décrit des ateliers, des choix techniques et des résultats entièrement synthétiques destinés à une démonstration hors ligne."
+    },
+    {
+      "chunk_index": 2,
+      "kind": "retour d'expérience",
+      "content": "Retour d'expérience fictif de la mission 128. Dans le secteur télécom, la modernisation applicative repose sur Kubernetes, FastAPI, Python. Le scénario décrit des ateliers, des choix techniques et des résultats entièrement synthétiques destinés à une démonstration hors ligne."
+    }
+  ]
+}

@@ -1,0 +1,27 @@
+{
+  "id": "mission-091",
+  "title": "Mission synthétique 091 - cybersécurité dans le secteur banque",
+  "sector": "banque",
+  "mission_type": "cybersécurité",
+  "technologies": [
+    "Spring Boot",
+    "PostgreSQL",
+    "Java"
+  ],
+  "year": 2020,
+  "referent_tag": "référent-fictif-07",
+  "summary": "Cette mission fictive concerne un acteur anonyme du secteur banque. L'équipe a conduit une cybersécurité avec Spring Boot, PostgreSQL, Java. La solution a amélioré la fiabilité, la sécurité et la maîtrise des délais, sans utiliser de donnée client réelle.",
+  "synthetic": true,
+  "documents": [
+    {
+      "chunk_index": 0,
+      "kind": "contexte projet",
+      "content": "Contexte projet fictif de la mission 091. Dans le secteur banque, la cybersécurité repose sur Spring Boot, PostgreSQL, Java. Le scénario décrit des ateliers, des choix techniques et des résultats entièrement synthétiques destinés à une démonstration hors ligne."
+    },
+    {
+      "chunk_index": 1,
+      "kind": "note d'architecture",
+      "content": "Note d'architecture fictif de la mission 091. Dans le secteur banque, la cybersécurité repose sur Spring Boot, PostgreSQL, Java. Le scénario décrit des ateliers, des choix techniques et des résultats entièrement synthétiques destinés à une démonstration hors ligne."
+    }
+  ]
+}

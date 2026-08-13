@@ -1,0 +1,27 @@
+{
+  "id": "mission-247",
+  "title": "Mission synthétique 247 - DevOps dans le secteur assurance",
+  "sector": "assurance",
+  "mission_type": "DevOps",
+  "technologies": [
+    "React",
+    "TypeScript",
+    "Azure"
+  ],
+  "year": 2020,
+  "referent_tag": "référent-fictif-07",
+  "summary": "Cette mission fictive concerne un acteur anonyme du secteur assurance. L'équipe a conduit une DevOps avec React, TypeScript, Azure. La solution a amélioré la fiabilité, la sécurité et la maîtrise des délais, sans utiliser de donnée client réelle.",
+  "synthetic": true,
+  "documents": [
+    {
+      "chunk_index": 0,
+      "kind": "contexte projet",
+      "content": "Contexte projet fictif de la mission 247. Dans le secteur assurance, la DevOps repose sur React, TypeScript, Azure. Le scénario décrit des ateliers, des choix techniques et des résultats entièrement synthétiques destinés à une démonstration hors ligne."
+    },
+    {
+      "chunk_index": 1,
+      "kind": "note d'architecture",
+      "content": "Note d'architecture fictif de la mission 247. Dans le secteur assurance, la DevOps repose sur React, TypeScript, Azure. Le scénario décrit des ateliers, des choix techniques et des résultats entièrement synthétiques destinés à une démonstration hors ligne."
+    }
+  ]
+}

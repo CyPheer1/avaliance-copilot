@@ -1,0 +1,1 @@
+"""Avaliance Copilot internal IA service."""

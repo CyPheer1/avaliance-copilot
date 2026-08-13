@@ -1,0 +1,6 @@
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]
+markers = [
+	"integration: tests that require a live PostgreSQL database and exercise the real ingestion/retrieval pipeline",
+]

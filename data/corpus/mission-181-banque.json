@@ -1,0 +1,27 @@
+{
+  "id": "mission-181",
+  "title": "Mission synthétique 181 - migration cloud dans le secteur banque",
+  "sector": "banque",
+  "mission_type": "migration cloud",
+  "technologies": [
+    "PostgreSQL",
+    "Spring Boot",
+    "Java"
+  ],
+  "year": 2020,
+  "referent_tag": "référent-fictif-01",
+  "summary": "Cette mission fictive concerne un acteur anonyme du secteur banque. L'équipe a conduit une migration cloud avec PostgreSQL, Spring Boot, Java. La solution a amélioré la fiabilité, la sécurité et la maîtrise des délais, sans utiliser de donnée client réelle.",
+  "synthetic": true,
+  "documents": [
+    {
+      "chunk_index": 0,
+      "kind": "contexte projet",
+      "content": "Contexte projet fictif de la mission 181. Dans le secteur banque, la migration cloud repose sur PostgreSQL, Spring Boot, Java. Le scénario décrit des ateliers, des choix techniques et des résultats entièrement synthétiques destinés à une démonstration hors ligne."
+    },
+    {
+      "chunk_index": 1,
+      "kind": "note d'architecture",
+      "content": "Note d'architecture fictif de la mission 181. Dans le secteur banque, la migration cloud repose sur PostgreSQL, Spring Boot, Java. Le scénario décrit des ateliers, des choix techniques et des résultats entièrement synthétiques destinés à une démonstration hors ligne."
+    }
+  ]
+}

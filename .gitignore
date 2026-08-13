@@ -1,0 +1,47 @@
+# =============================================================================
+# Avaliance Copilot — Root .gitignore
+# =============================================================================
+
+# Environment (NEVER commit real secrets)
+.env
+!.env.example
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+*.egg-info/
+dist/
+build/
+/Lib/
+/scripts/*.exe
+
+# Node
+node_modules/
+.next/
+
+# Data output (generated corpus — optionally committed)
+# Uncomment the line below to exclude generated corpus from Git:
+# data/corpus/*.json
+
+# Benchmark results are committed for traceability
+# benchmarks/
+
+# Docker
+docker-compose.override.yml
+
+# Safety-first cleanup staging (never delete without explicit approval)
+.cleanup_quarantine/

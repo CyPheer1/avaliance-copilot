@@ -1,0 +1,27 @@
+{
+  "id": "mission-076",
+  "title": "Mission synthétique 076 - modernisation applicative dans le secteur banque",
+  "sector": "banque",
+  "mission_type": "modernisation applicative",
+  "technologies": [
+    "Java",
+    "Spring Boot",
+    "PostgreSQL"
+  ],
+  "year": 2023,
+  "referent_tag": "référent-fictif-04",
+  "summary": "Cette mission fictive concerne un acteur anonyme du secteur banque. L'équipe a conduit une modernisation applicative avec Java, Spring Boot, PostgreSQL. La solution a amélioré la fiabilité, la sécurité et la maîtrise des délais, sans utiliser de donnée client réelle.",
+  "synthetic": true,
+  "documents": [
+    {
+      "chunk_index": 0,
+      "kind": "contexte projet",
+      "content": "Contexte projet fictif de la mission 076. Dans le secteur banque, la modernisation applicative repose sur Java, Spring Boot, PostgreSQL. Le scénario décrit des ateliers, des choix techniques et des résultats entièrement synthétiques destinés à une démonstration hors ligne."
+    },
+    {
+      "chunk_index": 1,
+      "kind": "note d'architecture",
+      "content": "Note d'architecture fictif de la mission 076. Dans le secteur banque, la modernisation applicative repose sur Java, Spring Boot, PostgreSQL. Le scénario décrit des ateliers, des choix techniques et des résultats entièrement synthétiques destinés à une démonstration hors ligne."
+    }
+  ]
+}

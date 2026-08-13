@@ -1,0 +1,12 @@
+# Compatibility override for explicit NVIDIA declarations.
+# The base compose file already assigns GPUs to Ollama and service-ia, so this
+# file is optional and retained for existing deployment commands.
+services:
+  ollama:
+    gpus: all
+
+  service-ia:
+    gpus: all
+    environment:
+      NVIDIA_VISIBLE_DEVICES: all
+      NVIDIA_DRIVER_CAPABILITIES: compute,utility

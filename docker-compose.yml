@@ -1,0 +1,203 @@
+# =============================================================================
+# Avaliance Copilot — Root Docker Compose
+# =============================================================================
+# Full Avaliance Copilot runtime: PostgreSQL, Ollama, FastAPI, Spring Boot and React.
+# The base deployment requires NVIDIA Container Toolkit because Ollama and
+# service-ia both receive all host GPUs. Use the documented CPU override only
+# when intentionally developing without GPU acceleration.
+#
+# Usage:
+#   cp .env.example .env   # edit placeholders
+#   docker compose up -d --build
+#   docker compose ps
+# =============================================================================
+
+services:
+  # ---------------------------------------------------------------------------
+  # PostgreSQL 16 + pgvector
+  # ---------------------------------------------------------------------------
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: avaliance_postgres
+    environment:
+      POSTGRES_USER: ${DB_USERNAME:-${POSTGRES_USER:-copilot}}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-${POSTGRES_PASSWORD:?DB_PASSWORD or POSTGRES_PASSWORD is required}}
+      POSTGRES_DB: ${DB_NAME:-${POSTGRES_DB:-avaliance}}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./db/init:/docker-entrypoint-initdb.d:ro
+    networks:
+      - avaliance-internal
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME:-${POSTGRES_USER:-copilot}} -d ${DB_NAME:-${POSTGRES_DB:-avaliance}}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
+  # ---------------------------------------------------------------------------
+  # Ollama — Self-hosted LLM (NVIDIA GPU required on this deployment)
+  # ---------------------------------------------------------------------------
+  ollama:
+    image: ollama/ollama
+    container_name: avaliance_ollama
+    gpus: all
+    environment:
+      LLM_MODEL: ${LLM_MODEL:?LLM_MODEL is required}
+      OLLAMA_KEEP_ALIVE: ${OLLAMA_KEEP_ALIVE:?OLLAMA_KEEP_ALIVE is required}
+      NVIDIA_VISIBLE_DEVICES: all
+      NVIDIA_DRIVER_CAPABILITIES: compute,utility
+    volumes:
+      - ollama_models:/root/.ollama
+    networks:
+      - avaliance-internal
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "ollama show \"$$LLM_MODEL\" >/dev/null 2>&1"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
+  # ---------------------------------------------------------------------------
+  # Internal FastAPI IA service
+  # ---------------------------------------------------------------------------
+  service-ia:
+    build:
+      context: ./service-ia
+    container_name: avaliance_service_ia
+    gpus: all
+    environment:
+      INTERNAL_TOKEN: ${INTERNAL_TOKEN:?INTERNAL_TOKEN is required}
+      DATABASE_URL: postgresql://${DB_USERNAME:-${POSTGRES_USER:-copilot}}:${DB_PASSWORD:-${POSTGRES_PASSWORD:?DB_PASSWORD or POSTGRES_PASSWORD is required}}@postgres:5432/${DB_NAME:-${POSTGRES_DB:-avaliance}}
+      EMBEDDING_MODEL_PATH: ${EMBEDDING_MODEL_PATH:-BAAI/bge-m3}
+      NVIDIA_VISIBLE_DEVICES: all
+      NVIDIA_DRIVER_CAPABILITIES: compute,utility
+      HF_HOME: /home/appuser/.cache/huggingface
+      OLLAMA_URL: ${OLLAMA_URL:-http://ollama:11434}
+      LLM_MODEL: ${LLM_MODEL:?LLM_MODEL is required}
+      OLLAMA_TIMEOUT_SECONDS: ${OLLAMA_TIMEOUT_SECONDS:?OLLAMA_TIMEOUT_SECONDS is required}
+      OLLAMA_KEEP_ALIVE: ${OLLAMA_KEEP_ALIVE:?OLLAMA_KEEP_ALIVE is required}
+      OLLAMA_NUM_CTX: ${OLLAMA_NUM_CTX:?OLLAMA_NUM_CTX is required}
+      GENERATION_MAX_TOKENS: ${GENERATION_MAX_TOKENS:?GENERATION_MAX_TOKENS is required}
+      GENERATION_MAX_CONTEXT_CHUNKS: ${GENERATION_MAX_CONTEXT_CHUNKS:?GENERATION_MAX_CONTEXT_CHUNKS is required}
+      GENERATION_ANSWER_MODE: ${GENERATION_ANSWER_MODE:?GENERATION_ANSWER_MODE is required}
+      GENERATION_USE_DETERMINISTIC_EXTRACTORS: ${GENERATION_USE_DETERMINISTIC_EXTRACTORS:?GENERATION_USE_DETERMINISTIC_EXTRACTORS is required}
+      CONTEXTUAL_RETRIEVAL_ENABLED: ${CONTEXTUAL_RETRIEVAL_ENABLED:-true}
+      CONTEXTUAL_RETRIEVAL_MAX_TOKENS: ${CONTEXTUAL_RETRIEVAL_MAX_TOKENS:-120}
+      MIN_SOURCE_SIMILARITY: ${MIN_SOURCE_SIMILARITY:?MIN_SOURCE_SIMILARITY is required}
+      RETRIEVAL_CANDIDATE_LIMIT: ${RETRIEVAL_CANDIDATE_LIMIT:-50}
+      RETRIEVAL_RERANK_LIMIT: ${RETRIEVAL_RERANK_LIMIT:-30}
+      RETRIEVAL_RRF_K: ${RETRIEVAL_RRF_K:-60}
+      RETRIEVAL_VECTOR_WEIGHT: ${RETRIEVAL_VECTOR_WEIGHT:-1.0}
+      RETRIEVAL_TEXT_WEIGHT: ${RETRIEVAL_TEXT_WEIGHT:-1.0}
+      RETRIEVAL_HNSW_EF_SEARCH: ${RETRIEVAL_HNSW_EF_SEARCH:-100}
+      RETRIEVAL_HNSW_ITERATIVE_SCAN: ${RETRIEVAL_HNSW_ITERATIVE_SCAN:-strict_order}
+      RETRIEVAL_RERANK_LEXICAL_BONUS: ${RETRIEVAL_RERANK_LEXICAL_BONUS:-0.0}
+      RETRIEVAL_LEXICAL_EVIDENCE_RESERVE: ${RETRIEVAL_LEXICAL_EVIDENCE_RESERVE:-5}
+      RETRIEVAL_EVIDENCE_RANK_SAFEGUARD: ${RETRIEVAL_EVIDENCE_RANK_SAFEGUARD:-10}
+      RETRIEVAL_MIN_FINAL_CHUNKS: ${RETRIEVAL_MIN_FINAL_CHUNKS:-10}
+      RETRIEVAL_MAX_FINAL_CHUNKS: ${RETRIEVAL_MAX_FINAL_CHUNKS:-15}
+    volumes:
+      - huggingface_cache:/home/appuser/.cache/huggingface
+    networks:
+      - avaliance-internal
+    depends_on:
+      postgres:
+        condition: service_healthy
+      ollama:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import os,urllib.request; request=urllib.request.Request('http://localhost:8000/ready', headers={'X-Internal-Token': os.environ['INTERNAL_TOKEN']}); urllib.request.urlopen(request, timeout=3).read()\""]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 120s
+
+  # ---------------------------------------------------------------------------
+  # Spring Boot backend (also owns Flyway application migrations)
+  # ---------------------------------------------------------------------------
+  backend:
+    build:
+      context: ./backend
+    container_name: avaliance_backend
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: ${DB_NAME:-${POSTGRES_DB:-avaliance}}
+      DB_USERNAME: ${DB_USERNAME:-${POSTGRES_USER:-copilot}}
+      DB_PASSWORD: ${DB_PASSWORD:-${POSTGRES_PASSWORD:?DB_PASSWORD or POSTGRES_PASSWORD is required}}
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
+      JWT_EXPIRATION_MS: ${JWT_EXPIRATION_MS:-86400000}
+      ADMIN_USERNAME: ${ADMIN_USERNAME:-admin}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:?ADMIN_PASSWORD is required}
+      IA_SERVICE_URL: ${IA_SERVICE_URL:-http://service-ia:8000}
+      INTERNAL_TOKEN: ${INTERNAL_TOKEN:?INTERNAL_TOKEN is required}
+      IA_CONNECT_TIMEOUT_MS: ${IA_CONNECT_TIMEOUT_MS:-5000}
+      IA_READ_TIMEOUT_MS: ${IA_READ_TIMEOUT_MS:-660000}
+      IA_STUB_ENABLED: ${IA_STUB_ENABLED:-false}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173,http://127.0.0.1:5173,http://localhost:3000,http://127.0.0.1:3000}
+      DOCUMENT_STORAGE_PATH: /data/documents
+    volumes:
+      - document_storage:/data/documents
+    ports:
+      - "8080:8080"
+    networks:
+      - avaliance-internal
+    depends_on:
+      postgres:
+        condition: service_healthy
+      service-ia:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "-", "http://localhost:8080/actuator/health"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 30s
+
+  # ---------------------------------------------------------------------------
+  # React frontend served by Nginx (also proxies /api to Spring Boot)
+  # ---------------------------------------------------------------------------
+  frontend:
+    build:
+      context: ./frontend
+    container_name: avaliance_frontend
+    ports:
+      - "3000:3000"
+    networks:
+      - avaliance-internal
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "-", "http://127.0.0.1:3000/healthz"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+
+# =============================================================================
+# Named volumes
+# =============================================================================
+volumes:
+  pgdata:
+    name: avaliance_pgdata
+  ollama_models:
+    name: avaliance_ollama_models
+  huggingface_cache:
+    name: avaliance_huggingface_cache
+  document_storage:
+    name: avaliance_document_storage
+
+# =============================================================================
+# Internal network — isolates service-to-service traffic
+# =============================================================================
+networks:
+  avaliance-internal:
+    name: avaliance-internal
+    driver: bridge

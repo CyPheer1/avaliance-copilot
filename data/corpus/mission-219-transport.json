@@ -1,0 +1,37 @@
+{
+  "id": "mission-219",
+  "title": "Mission synthétique 219 - cybersécurité dans le secteur transport",
+  "sector": "transport",
+  "mission_type": "cybersécurité",
+  "technologies": [
+    "Docker",
+    "GitLab CI",
+    "Terraform"
+  ],
+  "year": 2022,
+  "referent_tag": "référent-fictif-03",
+  "summary": "Cette mission fictive concerne un acteur anonyme du secteur transport. L'équipe a conduit une cybersécurité avec Docker, GitLab CI, Terraform. La solution a amélioré la fiabilité, la sécurité et la maîtrise des délais, sans utiliser de donnée client réelle.",
+  "synthetic": true,
+  "documents": [
+    {
+      "chunk_index": 0,
+      "kind": "contexte projet",
+      "content": "Contexte projet fictif de la mission 219. Dans le secteur transport, la cybersécurité repose sur Docker, GitLab CI, Terraform. Le scénario décrit des ateliers, des choix techniques et des résultats entièrement synthétiques destinés à une démonstration hors ligne."
+    },
+    {
+      "chunk_index": 1,
+      "kind": "note d'architecture",
+      "content": "Note d'architecture fictif de la mission 219. Dans le secteur transport, la cybersécurité repose sur Docker, GitLab CI, Terraform. Le scénario décrit des ateliers, des choix techniques et des résultats entièrement synthétiques destinés à une démonstration hors ligne."
+    },
+    {
+      "chunk_index": 2,
+      "kind": "retour d'expérience",
+      "content": "Retour d'expérience fictif de la mission 219. Dans le secteur transport, la cybersécurité repose sur Docker, GitLab CI, Terraform. Le scénario décrit des ateliers, des choix techniques et des résultats entièrement synthétiques destinés à une démonstration hors ligne."
+    },
+    {
+      "chunk_index": 3,
+      "kind": "extrait de proposition",
+      "content": "Extrait de proposition fictif de la mission 219. Dans le secteur transport, la cybersécurité repose sur Docker, GitLab CI, Terraform. Le scénario décrit des ateliers, des choix techniques et des résultats entièrement synthétiques destinés à une démonstration hors ligne."
+    }
+  ]
+}
