@@ -1616,26 +1616,23 @@ def generate_rfp_structure(request: RfpRequest, settings: Settings) -> RfpRespon
     business_terms = set(re.findall(r"[a-zà-ÿ]{4,}", _fold_rfp_text(" ".join(requirements.business_problem))))
     constraint_terms = set(re.findall(r"[a-zà-ÿ]{4,}", _fold_rfp_text(" ".join(requirements.security_and_compliance + requirements.technologies_and_constraints))))
     comparable_missions: list[RfpComparableMission] = []
+    relevance_threshold = 0.50
     for mission in candidates:
         mission_text = _fold_rfp_text(f"{mission.title} {mission.mission_type} {mission.summary}")
         mission_terms = set(re.findall(r"[a-zà-ÿ]{4,}", mission_text))
-        semantic_score = max(0.0, min(1.0, mission.similarity_score))
-        sector_match = 1.0 if sector and sector == _fold_rfp_text(mission.sector) else semantic_score * 0.20
-        project_overlap = len(project_terms & mission_terms) / len(project_terms) if project_terms else 0.0
-        need_overlap = len(business_terms & mission_terms) / len(business_terms) if business_terms else 0.0
-        constraint_overlap = len(constraint_terms & mission_terms) / len(constraint_terms) if constraint_terms else 0.0
-        technology_overlap = sum(technology.lower() in _fold_rfp_text(request.description) for technology in mission.technologies) / max(1, len(mission.technologies))
-        # Semantic relevance is a real retrieval signal, not a UI fallback; it
-        # gives every displayed dimension a meaningful value when vocabulary differs.
-        project_match = 0.70 * project_overlap + 0.30 * semantic_score
-        need_match = 0.75 * need_overlap + 0.25 * semantic_score
-        constraint_match = 0.70 * constraint_overlap + 0.30 * semantic_score
-        technology_match = 0.70 * technology_overlap + 0.30 * semantic_score
+        mission_sector = _fold_rfp_text(mission.sector)
+        sector_match = 1.0 if sector and sector == mission_sector else 0.0
+        # Each dimension is calculated from its own observable signal.  The vector
+        # rank is used only to find candidates; it is never copied into a score.
+        project_match = len(project_terms & mission_terms) / len(project_terms) if project_terms else 0.0
+        need_match = len(business_terms & mission_terms) / len(business_terms) if business_terms else 0.0
+        constraint_match = len(constraint_terms & mission_terms) / len(constraint_terms) if constraint_terms else 0.0
+        brief_text = _fold_rfp_text(request.description)
+        technology_match = sum(_fold_rfp_text(technology) in brief_text for technology in mission.technologies) / max(1, len(mission.technologies))
         final_score = 0.35 * sector_match + 0.20 * project_match + 0.20 * need_match + 0.15 * constraint_match + 0.10 * technology_match
-        # Retain only a real semantic/sector match, without padding to top_k.
-        # The low floor permits related transport records with different wording;
-        # unrelated records still lack both the sector and semantic signals.
-        if final_score >= 0.15 and (sector_match >= 0.20 or semantic_score >= 0.45):
+        # A comparable mission must meet the strict score floor and share the
+        # requested sector. Results are not padded to request.top_k.
+        if sector_match == 1.0 and final_score >= relevance_threshold:
             comparable_missions.append(RfpComparableMission(**mission.model_dump(), score_breakdown=RfpScoreBreakdown(sector_match=sector_match, project_type_match=project_match, business_need_match=need_match, constraint_match=constraint_match, technology_match=technology_match, final_score=final_score)))
     comparable_missions.sort(key=lambda item: item.score_breakdown.final_score, reverse=True)
     proposal = RfpProposal(sections=_proposal_sections(requirements, citations))
@@ -1646,7 +1643,8 @@ def generate_rfp_structure(request: RfpRequest, settings: Settings) -> RfpRespon
         evidence = _evidence_from_citations(citations)
     if not evidence or any(not any(item.quote in citation.content for citation in citations) for item in evidence):
         return RfpResponse(requirements=requirements, proposal=proposal, citations=citations, evidence=[], similar_missions=comparable_missions[:request.top_k], evidence_validation_passed=False, diagnostic="NO_RELEVANT_PDF_EVIDENCE")
-    return RfpResponse(requirements=requirements, proposal=proposal, citations=citations, evidence=evidence, similar_missions=comparable_missions[:request.top_k], evidence_validation_passed=True)
+    diagnostic = None if comparable_missions else "NO_SUFFICIENTLY_RELEVANT_MISSION"
+    return RfpResponse(requirements=requirements, proposal=proposal, citations=citations, evidence=evidence, similar_missions=comparable_missions[:request.top_k], evidence_validation_passed=True, diagnostic=diagnostic)
 
 
 def _explicit_alternatives_absent(
