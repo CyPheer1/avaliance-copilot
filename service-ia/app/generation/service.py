@@ -21,6 +21,7 @@ from ..schemas import (
     RetrievedChunk,
     RfpCitation,
     RfpClaim,
+    RfpEvidence,
     RfpComparableMission,
     RfpProposal,
     RfpRequest,
@@ -1566,6 +1567,19 @@ def _brief_facts(requirements: RfpRequirements) -> list[str]:
     return values[:4]
 
 
+def _evidence_from_citations(citations: list[RfpCitation]) -> list[RfpEvidence]:
+    """Create only non-empty verbatim excerpts that are demonstrably stored."""
+    evidence: list[RfpEvidence] = []
+    for citation in citations:
+        quote = citation.content.strip()[:480].strip()
+        if quote and quote in citation.content:
+            evidence.append(RfpEvidence(
+                id=f"evidence-{citation.chunk_id}", document_id=citation.document_id,
+                page=citation.page, quote=quote,
+            ))
+    return evidence
+
+
 def _proposal_sections(requirements: RfpRequirements, citations: list[RfpCitation]) -> list[RfpSection]:
     # Import locally to keep the general answer-generation module independent
     # from the RFP-only presentation composer.
@@ -1585,8 +1599,9 @@ def generate_rfp_structure(request: RfpRequest, settings: Settings) -> RfpRespon
     requirements = _extract_rfp_requirements(request.description, request.sector)
     retrieval = vector_search(RetrieveRequest(query=request.description, top_k=min(10, request.top_k * 2), corpus_scope="PDF"))
     citations = [citation for index, chunk in enumerate(retrieval.chunks, start=1) if (citation := _citation_for_chunk(chunk, index)) is not None]
-    if not citations:
-        return RfpResponse(requirements=requirements, proposal=RfpProposal(sections=_proposal_sections(requirements, [])), citations=[], similar_missions=[], evidence_validation_passed=False, diagnostic="NO_RELEVANT_PDF_EVIDENCE")
+    evidence = _evidence_from_citations(citations)
+    if not evidence:
+        return RfpResponse(requirements=requirements, proposal=RfpProposal(sections=_proposal_sections(requirements, [])), citations=[], evidence=[], similar_missions=[], evidence_validation_passed=False, diagnostic="NO_RELEVANT_PDF_EVIDENCE")
 
     from ..similar_missions.search import find_similar_missions
 
@@ -1604,16 +1619,34 @@ def generate_rfp_structure(request: RfpRequest, settings: Settings) -> RfpRespon
     for mission in candidates:
         mission_text = _fold_rfp_text(f"{mission.title} {mission.mission_type} {mission.summary}")
         mission_terms = set(re.findall(r"[a-zà-ÿ]{4,}", mission_text))
-        sector_match = 1.0 if sector and sector == _fold_rfp_text(mission.sector) else 0.0
-        project_match = len(project_terms & mission_terms) / len(project_terms) if project_terms else 0.0
-        need_match = len(business_terms & mission_terms) / len(business_terms) if business_terms else 0.0
-        constraint_match = len(constraint_terms & mission_terms) / len(constraint_terms) if constraint_terms else 0.0
-        technology_match = sum(technology.lower() in _fold_rfp_text(request.description) for technology in mission.technologies) / max(1, len(mission.technologies))
-        final_score = 0.40 * sector_match + 0.25 * project_match + 0.20 * need_match + 0.10 * constraint_match + 0.05 * technology_match
-        if final_score >= 0.45:
+        semantic_score = max(0.0, min(1.0, mission.similarity_score))
+        sector_match = 1.0 if sector and sector == _fold_rfp_text(mission.sector) else semantic_score * 0.20
+        project_overlap = len(project_terms & mission_terms) / len(project_terms) if project_terms else 0.0
+        need_overlap = len(business_terms & mission_terms) / len(business_terms) if business_terms else 0.0
+        constraint_overlap = len(constraint_terms & mission_terms) / len(constraint_terms) if constraint_terms else 0.0
+        technology_overlap = sum(technology.lower() in _fold_rfp_text(request.description) for technology in mission.technologies) / max(1, len(mission.technologies))
+        # Semantic relevance is a real retrieval signal, not a UI fallback; it
+        # gives every displayed dimension a meaningful value when vocabulary differs.
+        project_match = 0.70 * project_overlap + 0.30 * semantic_score
+        need_match = 0.75 * need_overlap + 0.25 * semantic_score
+        constraint_match = 0.70 * constraint_overlap + 0.30 * semantic_score
+        technology_match = 0.70 * technology_overlap + 0.30 * semantic_score
+        final_score = 0.35 * sector_match + 0.20 * project_match + 0.20 * need_match + 0.15 * constraint_match + 0.10 * technology_match
+        # Retain only a real semantic/sector match, without padding to top_k.
+        # The low floor permits related transport records with different wording;
+        # unrelated records still lack both the sector and semantic signals.
+        if final_score >= 0.15 and (sector_match >= 0.20 or semantic_score >= 0.45):
             comparable_missions.append(RfpComparableMission(**mission.model_dump(), score_breakdown=RfpScoreBreakdown(sector_match=sector_match, project_type_match=project_match, business_need_match=need_match, constraint_match=constraint_match, technology_match=technology_match, final_score=final_score)))
     comparable_missions.sort(key=lambda item: item.score_breakdown.final_score, reverse=True)
-    return RfpResponse(requirements=requirements, proposal=RfpProposal(sections=_proposal_sections(requirements, citations)), citations=citations, similar_missions=comparable_missions[:request.top_k], evidence_validation_passed=True)
+    proposal = RfpProposal(sections=_proposal_sections(requirements, citations))
+    # Validation is intentionally server-side: a response with fabricated or empty
+    # evidence is never serialized as a successful grounded proposal.
+    if any(not item.quote or not any(item.quote in citation.content for citation in citations) for item in evidence):
+        proposal = RfpProposal(sections=_proposal_sections(requirements, citations))
+        evidence = _evidence_from_citations(citations)
+    if not evidence or any(not any(item.quote in citation.content for citation in citations) for item in evidence):
+        return RfpResponse(requirements=requirements, proposal=proposal, citations=citations, evidence=[], similar_missions=comparable_missions[:request.top_k], evidence_validation_passed=False, diagnostic="NO_RELEVANT_PDF_EVIDENCE")
+    return RfpResponse(requirements=requirements, proposal=proposal, citations=citations, evidence=evidence, similar_missions=comparable_missions[:request.top_k], evidence_validation_passed=True)
 
 
 def _explicit_alternatives_absent(

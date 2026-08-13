@@ -381,12 +381,14 @@
 .page--rfp .rfp-proposal-prose p { margin: 0 0 14px; color: var(--text-primary); font-size: 15px; line-height: 1.78; }
 .page--rfp .rfp-proposal-section ul { margin: 7px 0 0; padding-left: 20px; }
 .page--rfp .rfp-proposal-section li { margin: 5px 0; font-size: 14px; line-height: 1.65; }
-.page--rfp .rfp-statement--evidence { margin: 18px 0; padding: 12px 14px; border-left: 3px solid #3a8ec7; border-radius: 0 8px 8px 0; background: #edf7fc; }
-.page--rfp .rfp-statement--evidence strong { font-size: 11px; text-transform: uppercase; letter-spacing: .04em; }
-.page--rfp .rfp-clarifications { margin-top: 20px; padding: 14px 16px; background: #fff8e9; border-left: 3px solid #b6893d; border-radius: 0 8px 8px 0; }
-.page--rfp .rfp-clarifications h4 { margin: 0 0 6px; color: #725112; }
-.page--rfp .rfp-clarifications ul { margin: 0; }
-.page--rfp .citation-chip { display: inline-block; margin-left: 4px; padding: 1px 5px; color: var(--color-blue-700); background: #e8f3fa; border-radius: 999px; font: 600 11px var(--font-mono); }
+.page--rfp .rfp-block { position: relative; margin: 0 0 16px; }
+.page--rfp .rfp-block:last-child { margin-bottom: 0; }
+.page--rfp .rfp-block--paragraph p { margin: 0; color: var(--text-primary); font-size: 15px; line-height: 1.78; }
+.page--rfp .rfp-block--callout { padding: 14px 16px; color: #26485e; background: #edf7fc; border-left: 3px solid #3a8ec7; border-radius: 0 9px 9px 0; }
+.page--rfp .rfp-block--callout p { margin: 0; font-size: 14px; line-height: 1.7; }
+.page--rfp .rfp-inline-citations { display: inline-flex; gap: 5px; margin: 8px 0 0; }
+.page--rfp .rfp-inline-citations a { padding: 2px 6px; color: var(--color-blue-700); background: #e8f3fa; border-radius: 999px; font: 600 11px var(--font-mono); text-decoration: none; }
+.page--rfp .rfp-inline-citations a:hover { background: #d9edf8; }
 .page--rfp .rfp-table-wrap { max-width: 100%; overflow-x: auto; margin: 20px 0; }
 .page--rfp .rfp-table-wrap table { width: 100%; min-width: 540px; border-collapse: collapse; font-size: 13px; }
 .page--rfp .rfp-table-wrap th, .page--rfp .rfp-table-wrap td { padding: 11px 12px; vertical-align: top; border: 1px solid var(--border-default); text-align: left; }
@@ -395,6 +397,9 @@
 .page--rfp .rfp-no-evidence, .page--rfp .rfp-no-match { color: var(--text-secondary); font-size: 13px; line-height: 1.6; }
 .page--rfp .rfp-no-evidence { margin-bottom: 20px; padding: 12px; background: #fff8e9; border-left: 3px solid #b6893d; border-radius: 0 8px 8px 0; }
 .page--rfp .reference-item .link-button { margin-top: 8px; padding: 0; color: var(--color-blue-700); background: transparent; border: 0; cursor: pointer; font-size: 11px; font-weight: 700; }
+.page--rfp .rfp-evidence-notes { max-width: 860px; margin: 0; padding: 0 clamp(24px, 4vw, 52px) 34px; color: var(--text-secondary); }
+.page--rfp .rfp-evidence-notes p { margin: 8px 0; padding: 10px 12px; font-size: 12px; line-height: 1.55; background: #f6f9fb; border-left: 2px solid #bfd7e7; border-radius: 0 6px 6px 0; }
+.page--rfp .rfp-evidence-notes strong { color: var(--color-blue-700); }
 .page--rfp .rfp-pdf-preview { width: min(1200px, 100%); margin: 16px auto 0; overflow: hidden; background: #fff; border: 1px solid var(--border-default); border-radius: var(--search-radius); box-shadow: var(--search-shadow); }
 .page--rfp .rfp-pdf-preview header { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 54px; padding: 10px 16px; border-bottom: 1px solid var(--border-default); font-size: 13px; }
 .page--rfp .rfp-pdf-preview iframe { display: block; width: 100%; height: min(70vh, 820px); border: 0; }

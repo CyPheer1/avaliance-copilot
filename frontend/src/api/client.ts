@@ -3,7 +3,9 @@ import type { ApiErrorBody, AuthSession, DashboardSummary, Mission, MissionPage,
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? '/api'
 const SESSION_KEY = 'avaliance-copilot-session'
 const AUTH_REQUEST_TIMEOUT_MS = 15_000
-const RFP_REQUEST_TIMEOUT_MS = 75_000
+// Proposal generation includes PDF retrieval and grounded drafting; it must never
+// inherit the deliberately short authentication timeout.
+const RFP_REQUEST_TIMEOUT_MS = 180_000
 
 export class ApiError extends Error {
   readonly status: number
@@ -44,38 +46,33 @@ function parseRfpResponse(value: unknown): RfpResponse {
       legacyMarkdown: legacyStructure ?? undefined,
       sections: safeSections.map((value, index) => {
         const section = asRecord(value)
-        if (!section || typeof section.title !== 'string') {
-          throw new ApiError(`La section ${index + 1} de la proposition est invalide. Réessayez.`, 502)
-        }
-        const rawReferences = section.verifiedReferences ?? section.verified_references
-        const references: unknown[] = Array.isArray(rawReferences) ? rawReferences : []
-        const rawTables = section.tables
-        const tables: unknown[] = Array.isArray(rawTables) ? rawTables : []
-        return {
-          key: typeof section.key === 'string' ? section.key : `section-${index + 1}`,
-          title: section.title,
-          factsFromBrief: strings(section.factsFromBrief ?? section.facts_from_brief),
-          verifiedReferences: references.flatMap((item) => {
-            if (typeof item === 'string') return [{ text: item, citationIndexes: [] }]
-            const claim = asRecord(item)
-            const rawIndexes = claim?.citationIndexes ?? claim?.citation_indexes
-            const indexes: unknown[] = Array.isArray(rawIndexes) ? rawIndexes : []
-            return claim && typeof claim.text === 'string'
-              ? [{ text: claim.text, citationIndexes: indexes.filter((citation): citation is number => typeof citation === 'number') }]
-              : []
-          }),
-          recommendations: strings(section.recommendations),
-          assumptionsToConfirm: strings(section.assumptionsToConfirm ?? section.assumptions_to_confirm),
-          tables: tables.flatMap((item) => {
-            const table = asRecord(item)
-            const rows: unknown[] = Array.isArray(table?.rows) ? table.rows : []
-            return table && typeof table.title === 'string'
-              ? [{ title: table.title, columns: strings(table.columns), rows: rows.map(strings) }]
-              : []
-          }),
-        }
+        if (!section || typeof section.title !== 'string') throw new ApiError(`La section ${index + 1} de la proposition est invalide. Réessayez.`, 502)
+        const rawBlocks: unknown[] = Array.isArray(section.blocks) ? section.blocks : []
+        const blocks: RfpResponse['proposal']['sections'][number]['blocks'] = rawBlocks.flatMap((value) => {
+          const block = asRecord(value)
+          const kind = block?.kind
+          const rawTable = asRecord(block?.table)
+          const rows: unknown[] = Array.isArray(rawTable?.rows) ? rawTable.rows : []
+          const table = rawTable && typeof rawTable.title === 'string'
+            ? { title: rawTable.title, columns: strings(rawTable.columns), rows: rows.map(strings) }
+            : undefined
+          return block && (kind === 'paragraph' || kind === 'bullets' || kind === 'table' || kind === 'callout')
+            ? [{ kind, text: typeof block.text === 'string' ? block.text : undefined, items: strings(block.items), table, evidenceIds: strings(block.evidenceIds ?? block.evidence_ids) }]
+            : []
+        })
+        if (blocks.length === 0 && !legacyStructure) throw new ApiError(`La section ${index + 1} ne contient aucun bloc lisible. Réessayez.`, 502)
+        return { id: typeof section.id === 'string' ? section.id : typeof section.key === 'string' ? section.key : `section-${index + 1}`, title: section.title, level: typeof section.level === 'number' ? section.level : 2, blocks }
       }),
     },
+    evidence: Array.isArray(root.evidence) ? root.evidence.flatMap((value) => {
+      const evidence = asRecord(value)
+      const id = evidence?.id
+      const documentId = evidence?.documentId ?? evidence?.document_id
+      const missionId = evidence?.missionId ?? evidence?.mission_id
+      return typeof id === 'string' && typeof documentId === 'number' && typeof evidence?.page === 'number' && typeof evidence.quote === 'string' && evidence.quote.trim()
+        ? [{ id, documentId, missionId: typeof missionId === 'number' ? missionId : null, page: evidence.page, quote: evidence.quote }]
+        : []
+    }) : [],
     citations: Array.isArray(root.citations) ? root.citations.flatMap((value) => {
       const citation = asRecord(value)
       const citationId = citation?.citationId ?? citation?.citation_id
@@ -104,11 +101,11 @@ function parseRfpResponse(value: unknown): RfpResponse {
             year: typeof mission.year === 'number' ? mission.year : 0,
             summary: typeof mission.summary === 'string' ? mission.summary : '',
               scoreBreakdown: {
-                sectorMatch: score('sectorMatch') ?? score('sector_match') ?? 0,
-                projectTypeMatch: score('projectTypeMatch') ?? score('project_type_match') ?? 0,
-                businessNeedMatch: score('businessNeedMatch') ?? score('business_need_match') ?? 0,
-                constraintMatch: score('constraintMatch') ?? score('constraint_match') ?? 0,
-                technologyMatch: score('technologyMatch') ?? score('technology_match') ?? 0,
+                sectorMatch: score('sectorMatch') ?? score('sector_match') ?? finalScore,
+                projectTypeMatch: score('projectTypeMatch') ?? score('project_type_match') ?? finalScore,
+                businessNeedMatch: score('businessNeedMatch') ?? score('business_need_match') ?? finalScore,
+                constraintMatch: score('constraintMatch') ?? score('constraint_match') ?? finalScore,
+                technologyMatch: score('technologyMatch') ?? score('technology_match') ?? finalScore,
                 finalScore,
               },
             }] : []
