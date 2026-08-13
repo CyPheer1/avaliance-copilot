@@ -19,12 +19,6 @@ public class RfpResponse {
 
     private Map<String, Object> requirements;
     private Map<String, Object> proposal;
-    /** Structured proposal content consumed directly by the presentation layer. */
-    private List<Map<String, Object>> sections;
-    /** Verbatim PDF excerpts, each linked to its physical source. */
-    private List<Map<String, Object>> evidence;
-    /** Plain-text fallback for export clients that cannot render blocks. */
-    private String rfpStructure;
     private List<Map<String, Object>> citations;
     private List<Map<String, Object>> similarMissions;
     private boolean evidenceValidationPassed;

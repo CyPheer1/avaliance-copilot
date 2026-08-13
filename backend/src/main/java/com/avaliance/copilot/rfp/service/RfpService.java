@@ -37,15 +37,9 @@ public class RfpService {
             if (request.getTopK() != null) rfpRequest.put("top_k", request.getTopK());
 
             Map<String, Object> rfpResponse = iaClientService.rfp(rfpRequest);
-            Map<String, Object> proposal = (Map<String, Object>) rfpResponse.getOrDefault("proposal", Map.of());
-            List<Map<String, Object>> sections = (List<Map<String, Object>>) rfpResponse.getOrDefault(
-                    "sections", proposal.getOrDefault("sections", List.of()));
             return RfpResponse.builder()
                     .requirements((Map<String, Object>) rfpResponse.getOrDefault("requirements", Map.of()))
-                    .proposal(proposal)
-                    .sections(sections)
-                    .evidence((List<Map<String, Object>>) rfpResponse.getOrDefault("evidence", List.of()))
-                    .rfpStructure((String) rfpResponse.get("rfp_structure"))
+                    .proposal((Map<String, Object>) rfpResponse.getOrDefault("proposal", Map.of()))
                     .citations((List<Map<String, Object>>) rfpResponse.getOrDefault("citations", List.of()))
                     .similarMissions((List<Map<String, Object>>) rfpResponse.getOrDefault("similar_missions", List.of()))
                     .evidenceValidationPassed(Boolean.TRUE.equals(rfpResponse.get("evidence_validation_passed")))

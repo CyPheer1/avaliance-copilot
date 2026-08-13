@@ -171,39 +171,31 @@ export interface RfpTable {
   rows: string[][]
 }
 
-export interface RfpBlock {
-  kind: 'paragraph' | 'bullets' | 'table' | 'callout'
-  text?: string
-  items: string[]
-  table?: RfpTable
-  evidenceIds: string[]
+export interface RfpClaim {
+  text: string
+  citationIndexes: number[]
 }
 
 export interface RfpSection {
-  id: string
+  key: string
   title: string
-  level: number
-  blocks: RfpBlock[]
-}
-
-export interface RfpEvidence {
-  id: string
-  missionId: number | null
-  documentId: number
-  page: number
-  quote: string
+  factsFromBrief: string[]
+  verifiedReferences: RfpClaim[]
+  recommendations: string[]
+  assumptionsToConfirm: string[]
+  tables: RfpTable[]
 }
 
 export interface RfpProposal {
   title: string
   sections: RfpSection[]
+  /** Compatibility content from the retired RFP contract. Never treat it as a brief fact. */
   legacyMarkdown?: string
 }
 
 export interface RfpResponse {
   requirements: Record<string, string | string[] | null>
   proposal: RfpProposal
-  evidence: RfpEvidence[]
   citations: RfpCitation[]
   similarMissions: RfpComparableMission[]
   evidenceValidationPassed: boolean

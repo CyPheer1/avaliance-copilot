@@ -14,9 +14,7 @@ class Settings(BaseSettings):
     llm_model: str = Field(min_length=1)
     ollama_timeout_seconds: float = Field(default=180.0, gt=0)
     ollama_num_ctx: int = Field(default=8192, ge=512, le=32768)
-    # Full proposals need room for their evidence-linked sections. General answer
-    # generation retains its configurable ceiling while RFP composition is local.
-    generation_max_tokens: int = Field(default=3072, ge=32, le=4096)
+    generation_max_tokens: int = Field(default=1500, ge=32, le=2048)
     generation_max_context_chunks: int = Field(default=20, ge=1, le=30)
     generation_cache_max_entries: int = Field(default=256, ge=0, le=4096)
     ollama_keep_alive: str = Field(default="10m", min_length=1)

@@ -21,7 +21,6 @@ from ..schemas import (
     RetrievedChunk,
     RfpCitation,
     RfpClaim,
-    RfpEvidence,
     RfpComparableMission,
     RfpProposal,
     RfpRequest,
@@ -1567,19 +1566,6 @@ def _brief_facts(requirements: RfpRequirements) -> list[str]:
     return values[:4]
 
 
-def _evidence_from_citations(citations: list[RfpCitation]) -> list[RfpEvidence]:
-    """Create only non-empty verbatim excerpts that are demonstrably stored."""
-    evidence: list[RfpEvidence] = []
-    for citation in citations:
-        quote = citation.content.strip()[:480].strip()
-        if quote and quote in citation.content:
-            evidence.append(RfpEvidence(
-                id=f"evidence-{citation.chunk_id}", document_id=citation.document_id,
-                page=citation.page, quote=quote,
-            ))
-    return evidence
-
-
 def _proposal_sections(requirements: RfpRequirements, citations: list[RfpCitation]) -> list[RfpSection]:
     # Import locally to keep the general answer-generation module independent
     # from the RFP-only presentation composer.
@@ -1599,9 +1585,8 @@ def generate_rfp_structure(request: RfpRequest, settings: Settings) -> RfpRespon
     requirements = _extract_rfp_requirements(request.description, request.sector)
     retrieval = vector_search(RetrieveRequest(query=request.description, top_k=min(10, request.top_k * 2), corpus_scope="PDF"))
     citations = [citation for index, chunk in enumerate(retrieval.chunks, start=1) if (citation := _citation_for_chunk(chunk, index)) is not None]
-    evidence = _evidence_from_citations(citations)
-    if not evidence:
-        return RfpResponse(requirements=requirements, proposal=RfpProposal(sections=_proposal_sections(requirements, [])), citations=[], evidence=[], similar_missions=[], evidence_validation_passed=False, diagnostic="NO_RELEVANT_PDF_EVIDENCE")
+    if not citations:
+        return RfpResponse(requirements=requirements, proposal=RfpProposal(sections=_proposal_sections(requirements, [])), citations=[], similar_missions=[], evidence_validation_passed=False, diagnostic="NO_RELEVANT_PDF_EVIDENCE")
 
     from ..similar_missions.search import find_similar_missions
 
@@ -1616,35 +1601,19 @@ def generate_rfp_structure(request: RfpRequest, settings: Settings) -> RfpRespon
     business_terms = set(re.findall(r"[a-zà-ÿ]{4,}", _fold_rfp_text(" ".join(requirements.business_problem))))
     constraint_terms = set(re.findall(r"[a-zà-ÿ]{4,}", _fold_rfp_text(" ".join(requirements.security_and_compliance + requirements.technologies_and_constraints))))
     comparable_missions: list[RfpComparableMission] = []
-    relevance_threshold = 0.50
     for mission in candidates:
         mission_text = _fold_rfp_text(f"{mission.title} {mission.mission_type} {mission.summary}")
         mission_terms = set(re.findall(r"[a-zà-ÿ]{4,}", mission_text))
-        mission_sector = _fold_rfp_text(mission.sector)
-        sector_match = 1.0 if sector and sector == mission_sector else 0.0
-        # Each dimension is calculated from its own observable signal.  The vector
-        # rank is used only to find candidates; it is never copied into a score.
+        sector_match = 1.0 if sector and sector == _fold_rfp_text(mission.sector) else 0.0
         project_match = len(project_terms & mission_terms) / len(project_terms) if project_terms else 0.0
         need_match = len(business_terms & mission_terms) / len(business_terms) if business_terms else 0.0
         constraint_match = len(constraint_terms & mission_terms) / len(constraint_terms) if constraint_terms else 0.0
-        brief_text = _fold_rfp_text(request.description)
-        technology_match = sum(_fold_rfp_text(technology) in brief_text for technology in mission.technologies) / max(1, len(mission.technologies))
-        final_score = 0.35 * sector_match + 0.20 * project_match + 0.20 * need_match + 0.15 * constraint_match + 0.10 * technology_match
-        # A comparable mission must meet the strict score floor and share the
-        # requested sector. Results are not padded to request.top_k.
-        if sector_match == 1.0 and final_score >= relevance_threshold:
+        technology_match = sum(technology.lower() in _fold_rfp_text(request.description) for technology in mission.technologies) / max(1, len(mission.technologies))
+        final_score = 0.40 * sector_match + 0.25 * project_match + 0.20 * need_match + 0.10 * constraint_match + 0.05 * technology_match
+        if final_score >= 0.45:
             comparable_missions.append(RfpComparableMission(**mission.model_dump(), score_breakdown=RfpScoreBreakdown(sector_match=sector_match, project_type_match=project_match, business_need_match=need_match, constraint_match=constraint_match, technology_match=technology_match, final_score=final_score)))
     comparable_missions.sort(key=lambda item: item.score_breakdown.final_score, reverse=True)
-    proposal = RfpProposal(sections=_proposal_sections(requirements, citations))
-    # Validation is intentionally server-side: a response with fabricated or empty
-    # evidence is never serialized as a successful grounded proposal.
-    if any(not item.quote or not any(item.quote in citation.content for citation in citations) for item in evidence):
-        proposal = RfpProposal(sections=_proposal_sections(requirements, citations))
-        evidence = _evidence_from_citations(citations)
-    if not evidence or any(not any(item.quote in citation.content for citation in citations) for item in evidence):
-        return RfpResponse(requirements=requirements, proposal=proposal, citations=citations, evidence=[], similar_missions=comparable_missions[:request.top_k], evidence_validation_passed=False, diagnostic="NO_RELEVANT_PDF_EVIDENCE")
-    diagnostic = None if comparable_missions else "NO_SUFFICIENTLY_RELEVANT_MISSION"
-    return RfpResponse(requirements=requirements, proposal=proposal, citations=citations, evidence=evidence, similar_missions=comparable_missions[:request.top_k], evidence_validation_passed=True, diagnostic=diagnostic)
+    return RfpResponse(requirements=requirements, proposal=RfpProposal(sections=_proposal_sections(requirements, citations)), citations=citations, similar_missions=comparable_missions[:request.top_k], evidence_validation_passed=True)
 
 
 def _explicit_alternatives_absent(

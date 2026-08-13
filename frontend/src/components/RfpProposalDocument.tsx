@@ -1,23 +1,22 @@
-import type { RfpEvidence, RfpProposal, RfpSection } from '../types.ts'
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
+import type { RfpProposal, RfpSection } from '../types.ts'
 
-export function RfpProposalDocument({ proposal, evidence }: { proposal: RfpProposal; evidence: RfpEvidence[] }) {
-  const evidenceById = new Map(evidence.map((item) => [item.id, item]))
-  return <div className="rfp-structured-document">{proposal.sections.map((section) => <StructuredSection key={section.id} section={section} evidenceById={evidenceById} />)}</div>
+export function RfpProposalDocument({ proposal }: { proposal: RfpProposal }) {
+  if (proposal.legacyMarkdown) {
+    return <div className="markdown-document"><ReactMarkdown remarkPlugins={[remarkGfm]}>{proposal.legacyMarkdown}</ReactMarkdown></div>
+  }
+
+  return <div className="rfp-structured-document">{proposal.sections.map((section) => <StructuredSection key={section.key} section={section} />)}</div>
 }
 
-function StructuredSection({ section, evidenceById }: { section: RfpSection; evidenceById: Map<string, RfpEvidence> }) {
-  const Heading = section.level === 1 ? 'h2' : 'h3'
+function StructuredSection({ section }: { section: RfpSection }) {
+  const prose = [...section.factsFromBrief, ...section.recommendations]
   return <section className="rfp-proposal-section">
-    <Heading>{section.title}</Heading>
-    {section.blocks.map((block, blockIndex) => <div className={`rfp-block rfp-block--${block.kind}`} key={`${section.id}-${blockIndex}`}>
-      {block.kind === 'paragraph' && block.text && <p>{block.text}</p>}
-      {block.kind === 'callout' && block.text && <p>{block.text}</p>}
-      {block.kind === 'bullets' && block.items.length > 0 && <ul>{block.items.map((item) => <li key={item}>{item}</li>)}</ul>}
-      {block.kind === 'table' && block.table && <div className="rfp-table-wrap"><h4>{block.table.title}</h4><table><thead><tr>{block.table.columns.map((column) => <th key={column}>{column}</th>)}</tr></thead><tbody>{block.table.rows.map((row, rowIndex) => <tr key={rowIndex}>{row.map((cell, cellIndex) => <td key={cellIndex}>{cell}</td>)}</tr>)}</tbody></table></div>}
-      {block.evidenceIds.length > 0 && <span className="rfp-inline-citations">{block.evidenceIds.map((id) => {
-        const item = evidenceById.get(id)
-        return item ? <a key={id} href={`#${id}`} title={item.quote}>[p. {item.page}]</a> : null
-      })}</span>}
-    </div>)}
+    <h3>{section.title}</h3>
+    {prose.length > 0 && <div className="rfp-proposal-prose">{prose.map((item) => <p key={item}>{item}</p>)}</div>}
+    {section.verifiedReferences.length > 0 && <div className="rfp-statement--evidence"><strong>Référence interne vérifiée</strong><ul>{section.verifiedReferences.map((item) => <li key={item.text}>{item.text} {item.citationIndexes.map((citationIndex) => <span className="citation-chip" key={citationIndex}>[{citationIndex}]</span>)}</li>)}</ul></div>}
+    {section.tables.map((table) => <div className="rfp-table-wrap" key={table.title}><h4>{table.title}</h4><table><thead><tr>{table.columns.map((column) => <th key={column}>{column}</th>)}</tr></thead><tbody>{table.rows.map((row, rowIndex) => <tr key={rowIndex}>{row.map((cell, cellIndex) => <td key={cellIndex}>{cell}</td>)}</tr>)}</tbody></table></div>)}
+    {section.assumptionsToConfirm.length > 0 && <div className="rfp-clarifications"><h4>Points à clarifier</h4><ul>{section.assumptionsToConfirm.map((item) => <li key={item}>{item}</li>)}</ul></div>}
   </section>
 }

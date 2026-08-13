@@ -222,44 +222,22 @@ class RfpCitation(BaseModel):
     source_index: int = Field(ge=1)
 
 
-class RfpEvidence(BaseModel):
-    """A short, auditable verbatim quote from one persisted PDF chunk."""
-
-    id: str
-    mission_id: int | None = None
-    document_id: int
-    page: int
-    quote: str = Field(min_length=1)
-
-
 class RfpTable(BaseModel):
     title: str
     columns: list[str] = Field(min_length=1)
     rows: list[list[str]] = Field(default_factory=list)
 
 
-class RfpBlock(BaseModel):
-    kind: Literal["paragraph", "bullets", "table", "callout"]
-    text: str | None = None
-    items: list[str] = Field(default_factory=list)
-    table: RfpTable | None = None
-    evidence_ids: list[str] = Field(default_factory=list)
-
-
 class RfpClaim(BaseModel):
-    """Compatibility representation for clients using the former contract."""
+    """A proposal statement with explicit provenance instead of parsed text markers."""
 
     text: str = Field(min_length=1)
     citation_indexes: list[int] = Field(default_factory=list)
 
 
 class RfpSection(BaseModel):
-    id: str
+    key: str
     title: str
-    level: int = Field(default=2, ge=1, le=6)
-    blocks: list[RfpBlock] = Field(min_length=1)
-    # Former fields remain populated only for older consumers during migration.
-    key: str | None = None
     facts_from_brief: list[str] = Field(default_factory=list)
     verified_references: list[RfpClaim] = Field(default_factory=list)
     recommendations: list[str] = Field(default_factory=list)
@@ -269,6 +247,7 @@ class RfpSection(BaseModel):
 
 class RfpProposal(BaseModel):
     title: str = "Proposition de réponse"
+    # The proposal follows the brief rather than a fixed section-count template.
     sections: list[RfpSection] = Field(min_length=1)
 
 
@@ -282,9 +261,6 @@ class RfpRequest(BaseModel):
 class RfpResponse(BaseModel):
     requirements: RfpRequirements
     proposal: RfpProposal
-    # Direct top-level contract for presentation clients; proposal.sections remains
-    # available for existing consumers while the backend forwards both forms.
-    evidence: list[RfpEvidence] = Field(default_factory=list)
     citations: list[RfpCitation] = Field(default_factory=list)
     similar_missions: list[RfpComparableMission] = Field(default_factory=list)
     evidence_validation_passed: bool

@@ -25,19 +25,14 @@ def find_similar_missions(request: SimilarRequest) -> SimilarResponse:
 
     where_clause = " AND ".join(conditions)
     query = f"""
-        WITH chunk_scores AS (
+        WITH semantic_scores AS (
             SELECT
                 m.id AS mission_id,
-                1 - (dc.embedding <=> %s::vector) AS vector_score,
-                ROW_NUMBER() OVER (PARTITION BY m.id ORDER BY dc.embedding <=> %s::vector) AS rank
+                MAX(1 - (dc.embedding <=> %s::vector)) AS vector_score
             FROM mission m
             JOIN doc_chunk dc ON dc.mission_id = m.id
             WHERE {where_clause}
-        ), semantic_scores AS (
-            SELECT mission_id, AVG(vector_score) AS vector_score
-            FROM chunk_scores
-            WHERE rank <= 3
-            GROUP BY mission_id
+            GROUP BY m.id
         )
         SELECT
             m.id,
@@ -66,7 +61,6 @@ def find_similar_missions(request: SimilarRequest) -> SimilarResponse:
     rows = execute_query(
         query,
         (
-            str(query_vector),
             str(query_vector),
             *filter_params,
             _VECTOR_WEIGHT,

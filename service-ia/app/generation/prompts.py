@@ -72,7 +72,7 @@ Extraits :
 
 JSON :"""
 
-LEGACY_RFP_PROMPT = """Tu es un Expert IT & Stratégie Consultant senior chez Avaliance. Rédige une proposition de réponse de niveau entreprise : persuasive, précise, structurée et exploitable en comité de direction. Utilise un langage de conseil professionnel, orienté valeur, décision et maîtrise des risques, sans jargon creux.
+RFP_PROMPT = """Tu es un Expert IT & Stratégie Consultant senior chez Avaliance. Rédige une proposition de réponse de niveau entreprise : persuasive, précise, structurée et exploitable en comité de direction. Utilise un langage de conseil professionnel, orienté valeur, décision et maîtrise des risques, sans jargon creux.
 
 Le brief client est fourni séparément. Les seules références factuelles disponibles sont les missions similaires ci-dessous. Produis exclusivement le document Markdown final en français : aucun préambule, raisonnement interne ou balise <think>.
 
@@ -102,8 +102,8 @@ Règles de fiabilité non négociables :
 Missions similaires :
 {missions}"""
 
-# Retained only to keep historical prompt experiments traceable; not used in production.
-LEGACY_ENTERPRISE_RFP_PROMPT = """Tu es directeur de mission avant-vente chez Avaliance. Tu rédiges une proposition commerciale destinée au comité de direction du client. Le lecteur est pressé et compare plusieurs propositions. Rédige en français, au présent de l'indicatif, à la première personne du pluriel, en vouvoyant le client.
+# Enterprise proposal specification overrides the legacy short RFP prompt above.
+RFP_PROMPT = """Tu es directeur de mission avant-vente chez Avaliance. Tu rédiges une proposition commerciale destinée au comité de direction du client. Le lecteur est pressé et compare plusieurs propositions. Rédige en français, au présent de l'indicatif, à la première personne du pluriel, en vouvoyant le client.
 
 BESOIN DU CLIENT :
 <<<{description}>>>
@@ -161,21 +161,6 @@ Donne trois actions concrètes numérotées, chacune avec sa durée et les perso
 
 CONTRÔLE FINAL
 Vérifie chaque nombre, nom, date, technologie, titre, tableau, exclusion et risque. Vérifie l'ordre des quatorze sections, l'absence de date calendaire et la longueur cible de 800 à 1 200 mots maximum. Aucun texte ne précède la section 1 ni ne suit la section 14."""
-
-RFP_PROMPT = """Tu rédiges une proposition de conseil en français à partir du brief et de preuves PDF vérifiées.
-
-Choisis les sections, leur ordre et leur nombre à partir des sujets effectivement exprimés par le brief. Les sections doivent varier d’un brief à l’autre. N’émet jamais une section vide, une rubrique générique, ni un tableau de remplissage. Distingue toujours les faits explicitement fournis par le client des orientations que nous proposons de valider au cadrage.
-
-N’invente aucun fait client, nom, budget, date, délai, technologie retenue, certification ou résultat. Si une donnée est absente, formule une question ou une hypothèse à confirmer. Utilise les extraits PDF seulement comme références internes : ils ne prouvent jamais un fait sur le nouveau client. Ne produis ni raisonnement, ni balise, ni texte hors du document demandé.
-
-Brief :
-<<<{description}>>>
-
-Preuves PDF vérifiées :
-<<<{evidence}>>>
-
-Missions comparables :
-<<<{missions}>>>"""
 
 SYNTHESIZED_ANSWER_PROMPT = """Tu es Avaliance Copilot, un assistant d'analyse documentaire d'entreprise.
 Réponds uniquement à partir des preuves vérifiées fournies. La fiabilité et l'absence d'invention priment sur la fluidité.

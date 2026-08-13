@@ -83,8 +83,7 @@ export function RfpPage() {
             <header><div className="rfp-document__identity"><span className="rfp-document__identity-icon"><img src={logoSrc} alt="" /></span><div><span className="eyebrow">Proposition Avaliance</span><h2>{generation.data.proposal.title}</h2></div></div><div className="document-actions"><button className="icon-button" type="button" onClick={copy} title="Copier" aria-label="Copier">{copied ? <Check size={18} /> : <Copy size={18} />}</button><button className="icon-button" type="button" onClick={download} title="Télécharger" aria-label="Télécharger"><Download size={18} /></button></div></header>
             <span className="sr-only" role="status">{copied ? 'Proposition copiée.' : ''}</span>
             {!generation.data.evidenceValidationPassed && <div className="rfp-no-evidence">Aucune preuve PDF suffisamment pertinente n’a été retenue. La proposition formule donc des recommandations et des hypothèses, et non des faits établis.</div>}
-            <RfpProposalDocument proposal={generation.data.proposal} evidence={generation.data.evidence} />
-            <footer className="rfp-evidence-notes">{generation.data.evidence.map((item) => <p id={item.id} key={item.id}><strong>[p. {item.page}]</strong> {item.quote}</p>)}</footer>
+            <RfpProposalDocument proposal={generation.data.proposal} />
           </article>
         </section>
       )}
