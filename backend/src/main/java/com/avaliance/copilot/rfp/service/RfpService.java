@@ -45,10 +45,12 @@ public class RfpService {
                     .requestId((String) rfpResponse.getOrDefault("request_id", requestId))
                     .requirements((Map<String, Object>) rfpResponse.getOrDefault("requirements", Map.of()))
                     .proposal((Map<String, Object>) rfpResponse.getOrDefault("proposal", Map.of()))
+                    .sources((List<Map<String, Object>>) rfpResponse.getOrDefault("sources", List.of()))
                     .coverageReport((List<Map<String, Object>>) rfpResponse.getOrDefault("coverage_report", List.of()))
                     .citations((List<Map<String, Object>>) rfpResponse.getOrDefault("citations", List.of()))
                     .similarMissions((List<Map<String, Object>>) rfpResponse.getOrDefault("similar_missions", List.of()))
                     .evidenceValidationPassed(Boolean.TRUE.equals(rfpResponse.get("evidence_validation_passed")))
+                    .quality((Map<String, Object>) rfpResponse.get("quality"))
                     .diagnostic((String) rfpResponse.get("diagnostic"))
                     .build();
 

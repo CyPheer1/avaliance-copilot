@@ -72,95 +72,169 @@ Extraits :
 
 JSON :"""
 
-RFP_PROMPT = """Tu es un Expert IT & Stratégie Consultant senior chez Avaliance. Rédige une proposition de réponse de niveau entreprise : persuasive, précise, structurée et exploitable en comité de direction. Utilise un langage de conseil professionnel, orienté valeur, décision et maîtrise des risques, sans jargon creux.
+RFP_BRIEF_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "sector": {"type": ["string", "null"]},
+        "organization_type": {"type": ["string", "null"]},
+        "business_problem": {"type": "array", "items": {"type": "string"}},
+        "project_type": {"type": "array", "items": {"type": "string"}},
+        "technologies_and_constraints": {"type": "array", "items": {"type": "string"}},
+        "security_and_compliance": {"type": "array", "items": {"type": "string"}},
+        "expected_deliverables": {"type": "array", "items": {"type": "string"}},
+        "scale": {"type": "array", "items": {"type": "string"}},
+        "timeline_and_urgency": {"type": "array", "items": {"type": "string"}},
+        "budget": {"type": ["string", "null"]},
+        "criteria": {"type": "array", "items": {"type": "string"}},
+        "dependencies": {"type": "array", "items": {"type": "string"}},
+        "exclusions": {"type": "array", "items": {"type": "string"}},
+        "assumptions": {"type": "array", "items": {"type": "string"}},
+        "ambiguities_and_questions": {"type": "array", "items": {"type": "string"}},
+        "atomic_needs": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "id": {"type": "string"},
+                    "text": {"type": "string"},
+                    "category": {"type": "string"},
+                    "source_excerpt": {"type": ["string", "null"]},
+                },
+                "required": ["id", "text", "category"],
+                "additionalProperties": False,
+            },
+        },
+    },
+    "required": [
+        "business_problem",
+        "project_type",
+        "technologies_and_constraints",
+        "security_and_compliance",
+        "expected_deliverables",
+        "atomic_needs",
+    ],
+    "additionalProperties": False,
+}
 
-Le brief client est fourni séparément. Les seules références factuelles disponibles sont les missions similaires ci-dessous. Produis exclusivement le document Markdown final en français : aucun préambule, raisonnement interne ou balise <think>.
+RFP_BRIEF_EXTRACTION_PROMPT = """Tu es l'analyste avant-vente senior d'Avaliance.
+Analyse le brief client ci-dessous et extrait exhaustivement ses composants structurés en JSON strict.
 
-Le document doit suivre exactement cette structure et ces titres :
-# Proposition de réponse
-## 1. Synthèse Exécutive
-En deux à quatre paragraphes courts, reformule le problème client, les résultats attendus et le positionnement de la réponse Avaliance. Distingue les éléments explicitement exprimés dans le brief des orientations proposées.
-## 2. Compréhension du Contexte et des Enjeux
-Analyse les enjeux métier, points de douleur, objectifs, contraintes et dépendances mentionnés dans le brief. Évoque les contraintes réglementaires uniquement si elles sont explicitement fournies. Ajoute des critères de succès et éléments à clarifier sous forme de listes, en les qualifiant comme propositions lorsque nécessaire.
-## 3. Approche et Architecture Proposée
-Présente le périmètre fonctionnel, les livrables et une architecture cible lisible. Distingue obligatoirement les **éléments établis par les références** des **orientations proposées à valider pendant le cadrage**. Ne présente jamais une technologie comme retenue par le client si le brief ne l'établit pas. Les technologies provenant des missions sont citées avec `[Réf. M<n>]`.
-## 4. Méthodologie et Démarche Projet
-Décris une démarche par phases : Phase 1 — Audit et cadrage ; Phase 2 — Conception et Build ; Phase 3 — Validation, mise en production, Run et transfert de compétences. Pour chaque phase, précise activités, livrables, jalons de décision et contribution attendue du client. Utilise des jalons relatifs, jamais de durée ou d'engagement ferme non fourni.
-## 5. Gouvernance et Équipe
-Propose un modèle de pilotage Agile adapté : instances, rituels, responsabilités, indicateurs de suivi, assurance qualité et gestion des risques. Ces modalités doivent être formulées comme « à convenir » ou « proposées » quand elles ne viennent pas du brief. N'invente ni nom, ni effectif, ni certification, ni engagement contractuel.
-## 6. Facteurs Clés de Succès
-Explique pourquoi Avaliance est un partenaire pertinent en liant les capacités proposées aux missions comparables. Présente les références utiles et leur pertinence dans des puces ; chaque fait sur une mission (secteur, type, technologie, résultat ou résumé) porte immédiatement la citation exacte `[Réf. M<n>]`. Termine par les hypothèses, questions ouvertes et prochaines étapes de cadrage.
+Règles impératives :
+- `atomic_needs` : Décompose le brief en 3 à 10 besoins/exigences atomiques distincts et vérifiables. Chaque besoin doit avoir un id unique ("need-01", "need-02", etc.) et son extrait source exact.
+- Ne duplique pas la même phrase dans toutes les catégories.
+- Si le secteur est implicite ou explicite, renseigne-le ("santé", "banque", "assurance", "télécom", "transport", "énergie", "secteur public", etc.).
+- N'invente aucun fait, budget ou technologie absents du brief.
+- Retourne uniquement l'objet JSON conforme au schéma, sans préambule ni balise <think>.
 
-Règles de fiabilité non négociables :
-- Le brief peut être reformulé, mais ne permet pas d'inventer des faits client, résultats, contraintes, décisions ou obligations réglementaires.
-- Les missions sont des références ; elles ne prouvent aucun fait concernant le nouveau client.
-- N'invente jamais de client réel, résultat, technologie, chiffre, budget, prix, charge, date, délai, référence, certification, ressource ou engagement contractuel. Les prix et budgets sont exclus sauf demande explicite et données fournies dans le brief.
-- Chaque fait tiré d'une mission doit être immédiatement suivi de sa citation `[Réf. M<n>]`. Ne crée aucune citation différente.
-- Si les missions sont peu informatives, formule des recommandations conditionnelles et des questions de cadrage au lieu de combler les lacunes.
-- Rédige des paragraphes concis, des listes utiles et, seulement si pertinent, un tableau Markdown de risques avec les colonnes « Risque ou dépendance », « Impact possible » et « Mesure de maîtrise proposée ».
+Brief client :
+{description}
 
-Missions similaires :
-{missions}"""
+JSON :"""
 
-# Enterprise proposal specification overrides the legacy short RFP prompt above.
-RFP_PROMPT = """Tu es directeur de mission avant-vente chez Avaliance. Tu rédiges une proposition commerciale destinée au comité de direction du client. Le lecteur est pressé et compare plusieurs propositions. Rédige en français, au présent de l'indicatif, à la première personne du pluriel, en vouvoyant le client.
+RFP_SECTION_BATCH_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "sections": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "key": {"type": "string"},
+                    "status": {
+                        "type": "string",
+                        "enum": ["complete", "tailored", "not_applicable", "requires_clarification"],
+                    },
+                    "status_reason": {"type": ["string", "null"]},
+                    "summary": {"type": ["string", "null"]},
+                    "narrative": {"type": "array", "items": {"type": "string"}},
+                    "claims": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "id": {"type": "string"},
+                                "text": {"type": "string"},
+                                "kind": {
+                                    "type": "string",
+                                    "enum": ["brief_fact", "internal_evidence", "web_evidence", "recommendation", "assumption", "question"],
+                                },
+                                "source_ids": {"type": "array", "items": {"type": "string"}},
+                            },
+                            "required": ["id", "text", "kind", "source_ids"],
+                            "additionalProperties": False,
+                        },
+                    },
+                    "bullets": {"type": "array", "items": {"type": "string"}},
+                    "tables": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "title": {"type": "string"},
+                                "columns": {"type": "array", "items": {"type": "string"}},
+                                "rows": {
+                                    "type": "array",
+                                    "items": {"type": "array", "items": {"type": "string"}},
+                                },
+                            },
+                            "required": ["title", "columns", "rows"],
+                            "additionalProperties": False,
+                        },
+                    },
+                    "questions": {"type": "array", "items": {"type": "string"}},
+                },
+                "required": ["key", "status", "narrative", "claims"],
+                "additionalProperties": False,
+            },
+        },
+    },
+    "required": ["sections"],
+    "additionalProperties": False,
+}
 
-BESOIN DU CLIENT :
-<<<{description}>>>
+RFP_SECTION_BATCH_PROMPT = """Tu es directeur de mission avant-vente chez Avaliance.
+Tu rédiges les sections suivantes d'une proposition commerciale de haut niveau pour le comité de direction client :
+{section_specs}
 
-RÉFÉRENCES COMPARABLES — missions réellement réalisées et seule source de faits extérieurs au besoin :
-<<<{missions}>>>
+BRIEF CLIENT :
+{brief}
 
-Retourne uniquement le document Markdown final. Aucun préambule, aucune conclusion hors section 14, aucun raisonnement interne et aucune balise <think>.
+SOURCES INTERNES DISPONIBLES (PDFs indexés) :
+{sources}
 
-RÈGLES ABSOLUES
-- N'écris aucun nombre, montant, pourcentage, durée ni date qui ne figure pas mot pour mot dans le besoin ou les références. Si une valeur manque, emploie une formulation qualitative, « (à confirmer en cadrage) », « à relever au cadrage » ou « cible à fixer au cadrage ».
-- N'invente aucun nom d'entreprise, produit, client ou personne. Cite les références par leur intitulé exact. N'affirme aucune expérience qui n'est pas décrite dans les références.
-- N'utilise que des échéances relatives. N'écris jamais de date calendaire ni de mois nommé.
-- Si les références sont vides, sans rapport réel avec le besoin, ou si le besoin sort du conseil en systèmes d'information, réponds uniquement avec ce paragraphe et arrête-toi : « Nous ne disposons pas de référence suffisamment comparable dans notre base pour construire une proposition fondée sur cette demande. Précisez le secteur, la nature de la prestation attendue et les contraintes techniques, ou sollicitez un cadrage avec un directeur de mission. »
-- Une idée par phrase. Supprime les phrases génériques. N'emploie jamais les formulations bannies « solution robuste et scalable », « approche agile et itérative » employée seule, « meilleures pratiques du marché », « nous accompagnons nos clients depuis de nombreuses années », « synergie », « clé en main », « state of the art », « leader du marché », « solution innovante » et « nous mettrons tout en œuvre ».
+RÈGLES DE RÉDACTION STRICTES :
+1. Rédige en français professionnel, percutant, précis et directement applicable au besoin du client.
+2. Pour chaque section demandée, produis du contenu sur mesure dans `narrative` (paragraphes complets), `claims` (affirmations typées), `bullets` (listes d'actions/décisions) et optionnellement `tables` (tableaux structurés pertinents).
+3. Type chaque claim dans `claims` :
+   - `brief_fact` : fait direct du brief (source_ids: ["brief"]).
+   - `internal_evidence` : fait prouvé par un extrait de source interne disponible ci-dessus (source_ids: [id de source exact comme "doc-01"]). N'invente JAMAIS d'id de source.
+   - `recommendation` : recommandation / préconisation méthodologique ou technique d'Avaliance (source_ids: []).
+   - `assumption` : hypothèse structurante à confirmer (source_ids: []).
+   - `question` : question de cadrage ou point à clarifier (source_ids: []).
+4. Si une section n'est pas applicable au brief (ex. migration s'il n'y a pas de migration), marque son status en "not_applicable" avec un `status_reason` court et justifié.
+5. Ne cite aucune référence synthétique ni mission imaginaire. N'invente aucun budget, date calendaire fixe ou nom d'éditeur non fourni.
+6. Retourne uniquement l'objet JSON valide, sans balise <think>.
 
-MÉTHODE DE RÉDACTION
-Analyse silencieusement le besoin et les références avant d'écrire. Distingue systématiquement : les faits du besoin, les faits démontrés par une référence et les éléments à confirmer au cadrage. N'utilise jamais une référence comme preuve d'un fait chez le client. Ne transforme jamais une technologie ou un résultat de référence en décision déjà prise par le client.
+JSON :"""
 
-Transforme le besoin en décisions lisibles. Chaque livrable, jalon, indicateur, risque, exclusion et question doit pouvoir être relié à une phrase précise du besoin ou des références. Lorsqu'un élément n'est pas étayé, écris une formulation de cadrage plutôt qu'une recommandation déguisée en fait. Ne remplis pas un tableau avec des variantes de la même idée.
+RFP_REPAIR_PROMPT = """Tu es le contrôleur qualité avant-vente chez Avaliance.
+La proposition générée comporte des non-conformités à corriger immédiatement :
+{violations}
 
-Le document est destiné à la décision. Commence chaque section directement par son contenu. Utilise des tableaux compacts. Dans les listes, formule des éléments actionnables. Ne répète pas les références dans le corps du document ; réserve leur détail factuel à la section 11. Dans la colonne « Proximité », utilise « à confirmer en cadrage » si les entrées ne fournissent pas explicitement ce rapprochement.
+BRIEF :
+{brief}
 
-PLAN IMPOSÉ
-Quatorze sections, dans cet ordre, avec exactement ces titres de niveau 2. N'en ajoute aucune et n'en supprime aucune. Saute la section 6 uniquement si le besoin n'a aucune dimension de conception technique.
+SOURCES VALIDES :
+{sources}
 
-## 1. Synthèse exécutive
-Écris cette section en dernier mais place-la ici. Sois très concis et couvre strictement cet ordre : situation et déclencheur, problème du point de vue client, proposition compréhensible par un non-technicien, résultat et indicateur, référence la plus proche citée par son intitulé exact, première étape concrète.
-## 2. Compréhension du besoin
-Distingue symptôme, cause et enjeu. Termine par une phrase unique qui énonce le problème à résoudre. N'annonce aucune solution.
-## 3. Objectifs et résultats attendus
-Utilise un tableau Markdown avec exactement les colonnes « Objectif | Indicateur | Mesure actuelle | Cible ». Si une valeur manque, écris « à relever au cadrage » et « cible à fixer au cadrage ».
-## 4. Périmètre
-Présente deux listes nommées INCLUS et EXCLUS. Formule les inclusions en livrables vérifiables. Donne pour chaque exclusion une raison de cinq mots maximum. Examine notamment reprise d'historique, formation des utilisateurs finaux, maintenance après mise en service, licences et matériel, développements chez des éditeurs tiers et exploitation en régime permanent ; n'exclus pas ce qui est explicitement demandé.
-## 5. Démarche proposée
-Utilise un tableau « Phase | Objectif | Livrables | Critère de sortie ». Appuie le découpage sur les références, sans prétendre que leur déroulé se reproduit à l'identique. Ne mets aucune durée. Un critère de sortie est une preuve observable, jamais « validation du client » seul. Ajoute ensuite deux phrases sur le mode opératoire de la phase la plus risquée : décision attendue, entrée à obtenir et repli si elle manque.
-## 6. Architecture et solution cible
-Pars des contraintes du client, pas des technologies. Pour chaque brique, précise son rôle et pourquoi elle est retenue ici. Ne cite une technologie que si elle apparaît dans le besoin ou les références. Si une technologie vient d'une référence, qualifie-la d'orientation à confirmer. Termine par la trajectoire depuis l'existant ; personne ne démarre d'une page blanche.
-## 7. Planning et jalons
-Utilise un tableau « Jalon | Échéance relative | Contenu » avec quatre à six jalons. Ajoute exactement trois phrases sur le chemin critique, la première valeur livrée et la dépendance externe la plus risquée. Une durée ne peut venir que des références ; sinon écris « durée à arrêter au cadrage ».
-## 8. Dispositif et gouvernance
-Utilise un tableau « Profil | Ce qu'il produit ». Décris ensuite chaque instance avec son nom, sa fréquence, ses participants et les décisions prises. N'écris aucun nom de personne, aucun effectif ni aucune fréquence chiffrée sans source. Termine par l'engagement de continuité : le profil qui reste du début à la fin.
-## 9. Estimation budgétaire indicative
-Si les références contiennent des budgets exploitables, donne la fourchette [min ; max], la médiane et le nombre de missions concernés. Sinon écris exactement « fourchette non communicable en l'état ». Ajoute les hypothèses de chiffrage, les facteurs de hausse, les postes à la charge du client et la modalité proposée avec sa raison. Ne calcule jamais une valeur à partir d'éléments incomplets. Termine exactement par : « Fourchette indicative calculée sur des missions comparables. Elle ne constitue pas un engagement de prix. Le chiffrage ferme est établi à l'issue du cadrage. »
-## 10. Maîtrise des risques
-Utilise un tableau « Risque | Déclencheur observable | Impact | Prévention | Repli ». Présente au maximum cinq risques spécifiques à ce projet, en privilégiant ceux observés dans les références. Le déclencheur est observable et le repli est réalisable sans supposer un budget, une équipe ou une technologie absents des entrées. N'écris pas de risque générique sans contenu projet.
-## 11. Références comparables
-Utilise un tableau « # | Mission | Secteur | Nature | Année | Technologies | Proximité ». Reprends exactement les intitulés et valeurs fournis. N'ajoute aucun commentaire.
-## 12. Facteurs clés de succès
-Présente au maximum cinq engagements réciproques côté client : décisions, personnes disponibles, accès et arbitrages. Ne formule aucun reproche anticipé.
-## 13. Hypothèses et points à clarifier
-Utilise un tableau « Hypothèse ou question | Effet si elle se révèle fausse ». Rassemble exhaustivement toutes les hypothèses et questions ouvertes.
-## 14. Prochaines étapes
-Donne trois actions concrètes numérotées, chacune avec sa durée et les personnes à mobiliser côté client.
+PROPOSITION À CORRIGER :
+{raw_proposal}
 
-CONTRÔLE FINAL
-Vérifie chaque nombre, nom, date, technologie, titre, tableau, exclusion et risque. Vérifie l'ordre des quatorze sections, l'absence de date calendaire et la longueur cible de 800 à 1 200 mots maximum. Aucun texte ne précède la section 1 ni ne suit la section 14."""
+Corrige l'ensemble des violations en retournant l'objet JSON complet et rigoureusement conforme au schéma.
+
+JSON :"""
+
+RFP_PROMPT = RFP_SECTION_BATCH_PROMPT
 
 SYNTHESIZED_ANSWER_PROMPT = """Tu es Avaliance Copilot, un assistant d'analyse documentaire d'entreprise.
 Réponds uniquement à partir des preuves vérifiées fournies. La fiabilité et l'absence d'invention priment sur la fluidité.

@@ -63,9 +63,42 @@ export function RfpPage() {
       {generation.data && (
         <section className="rfp-result reveal">
           <article className="rfp-document">
-            <header><div className="rfp-document__identity"><span className="rfp-document__identity-icon"><img src={logoSrc} alt="" /></span><div><span className="eyebrow">Proposition Avaliance</span><h2>{generation.data.proposal.title}</h2></div></div><div className="document-actions"><button className="icon-button" type="button" onClick={copy} title="Copier" aria-label="Copier">{copied ? <Check size={18} /> : <Copy size={18} />}</button><button className="icon-button" type="button" onClick={download} title="Télécharger" aria-label="Télécharger"><Download size={18} /></button></div></header>
-            <span className="sr-only" role="status">{copied ? 'Proposition copiée.' : ''}</span>
-            {!generation.data.evidenceValidationPassed && <div className="rfp-no-evidence">Aucune preuve PDF suffisamment pertinente n’a été retenue. La proposition formule donc des recommandations et des hypothèses, et non des faits établis.</div>}
+            <header>
+              <div className="rfp-document__identity">
+                <span className="rfp-document__identity-icon">
+                  <img src={logoSrc} alt="" />
+                </span>
+                <div>
+                  <span className="eyebrow">Proposition Enterprise Avaliance</span>
+                  <h2>{generation.data.proposal.title}</h2>
+                  {generation.data.quality && (
+                    <div className="rfp-quality-meta" style={{ display: 'flex', gap: '0.75rem', marginTop: '0.25rem', fontSize: '0.8125rem', color: '#64748b' }}>
+                      <span><strong>Sections :</strong> {generation.data.proposal.sections.length}/19</span>
+                      <span><strong>Indice de conformité :</strong> {Math.round(generation.data.quality.score * 100)}%</span>
+                      {generation.data.sources && generation.data.sources.length > 0 && (
+                        <span><strong>Preuves PDF :</strong> {generation.data.sources.length} document(s)</span>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+              <div className="document-actions">
+                <button className="icon-button" type="button" onClick={copy} title="Copier" aria-label="Copier">
+                  {copied ? <Check size={18} /> : <Copy size={18} />}
+                </button>
+                <button className="icon-button" type="button" onClick={download} title="Télécharger (.txt)" aria-label="Télécharger">
+                  <Download size={18} />
+                </button>
+              </div>
+            </header>
+            <span className="sr-only" role="status">
+              {copied ? 'Proposition copiée.' : ''}
+            </span>
+            {!generation.data.evidenceValidationPassed && (
+              <div className="rfp-no-evidence">
+                Aucune preuve PDF suffisamment pertinente n’a été retenue dans la base interne. La proposition formule donc des recommandations méthodologiques, des hypothèses et des questions de cadrage issues du brief client.
+              </div>
+            )}
             <RfpProposalDocument proposal={generation.data.proposal} />
           </article>
         </section>

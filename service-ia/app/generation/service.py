@@ -1521,19 +1521,9 @@ def _requirement_values(description: str, terms: tuple[str, ...]) -> list[str]:
 
 
 def _extract_rfp_requirements(description: str, sector: str | None) -> RfpRequirements:
-    folded = _fold_rfp_text(description)
-    inferred_sector = sector or next((value for value in ("sante", "telecom", "transport", "logistique", "energie", "assurance", "banque") if value in folded), None)
-    return RfpRequirements(
-        sector=inferred_sector,
-        organization_type=next((value for value in ("hopital", "etablissement", "mutuelle", "operateur", "collectivite", "groupe") if value in folded), None),
-        business_problem=_requirement_values(description, ("objectif", "besoin", "portail", "modernis", "interoper", "dossier", "patient", "client", "supervision", "continuite", "reprise")),
-        project_type=_requirement_values(description, ("portail", "migration", "plateforme", "cloud", "api", "integration", "cyber", "segmentation", "siem", "supervision")),
-        technologies_and_constraints=_requirement_values(description, ("api", "java", "spring", "postgres", "interface", "historique", "accessibil", "siem", "reseau", "second facteur", "mfa")),
-        security_and_compliance=_requirement_values(description, ("hds", "secur", "conform", "identite nationale", "rgpd", "authent", "nis2", "journal", "astreinte", "reprise")),
-        expected_deliverables=_requirement_values(description, ("livrable", "portail", "rapport", "formation", "deploiement", "recette", "plan de reprise", "feuille de route")),
-        scale=_requirement_values(description, ("utilisateur", "volume", "regional", "etablissement", "patient", "site")),
-        timeline_and_urgency=_requirement_values(description, ("echeance", "urgent", "deadline", "financement", "jalon", "delai", "fin d'annee", "fin d’année")),
-    )
+    from .rfp_proposal import _extract_rfp_requirements as _extract
+
+    return _extract(description, sector)
 
 
 def _source_marker(index: int) -> str:
@@ -1567,62 +1557,16 @@ def _brief_facts(requirements: RfpRequirements) -> list[str]:
 
 
 def _proposal_sections(requirements: RfpRequirements, citations: list[RfpCitation]) -> list[RfpSection]:
-    # Import locally to keep the general answer-generation module independent
-    # from the RFP-only presentation composer.
     from .rfp_proposal import build_adaptive_proposal
 
     return build_adaptive_proposal(requirements, citations)
 
 
 def generate_rfp_structure(request: RfpRequest, settings: Settings) -> RfpResponse:
-    """Build a validated, citation-safe proposal from PDF evidence only.
+    """Build a structured, 19-section enterprise proposal strictly from PDF evidence and brief facts."""
+    from .rfp_proposal import generate_rfp_proposal
 
-    Retrieval and comparable-mission ranking are orchestrated by the RFP route so
-    this function cannot accidentally use synthetic mission summaries as evidence.
-    """
-    from ..retrieval.vector_search import vector_search
-
-    requirements = _extract_rfp_requirements(request.description, request.sector)
-    # Candidate retrieval is deliberately not promoted to proposal evidence.
-    # An RFP citation requires claim-level validation, which this legacy contract
-    # cannot express safely. Until then, recommendations remain uncited.
-    _ = vector_search(RetrieveRequest(query=request.description, top_k=min(10, request.top_k * 2), corpus_scope="PDF"))
-    citations: list[RfpCitation] = []
-
-    from ..similar_missions.search import find_similar_missions
-
-    candidates = find_similar_missions(SimilarRequest(
-        description=request.description,
-        sector=request.sector or requirements.sector,
-        mission_type=request.mission_type,
-        top_k=min(20, request.top_k * 4),
-    )).missions
-    sector = _fold_rfp_text(requirements.sector or request.sector or "")
-    project_terms = set(re.findall(r"[a-zà-ÿ]{4,}", _fold_rfp_text(" ".join(requirements.project_type))))
-    business_terms = set(re.findall(r"[a-zà-ÿ]{4,}", _fold_rfp_text(" ".join(requirements.business_problem))))
-    constraint_terms = set(re.findall(r"[a-zà-ÿ]{4,}", _fold_rfp_text(" ".join(requirements.security_and_compliance + requirements.technologies_and_constraints))))
-    comparable_missions: list[RfpComparableMission] = []
-    for mission in candidates:
-        mission_text = _fold_rfp_text(f"{mission.title} {mission.mission_type} {mission.summary}")
-        mission_terms = set(re.findall(r"[a-zà-ÿ]{4,}", mission_text))
-        sector_match = 1.0 if sector and sector == _fold_rfp_text(mission.sector) else 0.0
-        project_match = len(project_terms & mission_terms) / len(project_terms) if project_terms else 0.0
-        need_match = len(business_terms & mission_terms) / len(business_terms) if business_terms else 0.0
-        constraint_match = len(constraint_terms & mission_terms) / len(constraint_terms) if constraint_terms else 0.0
-        technology_match = sum(technology.lower() in _fold_rfp_text(request.description) for technology in mission.technologies) / max(1, len(mission.technologies))
-        final_score = 0.40 * sector_match + 0.25 * project_match + 0.20 * need_match + 0.10 * constraint_match + 0.05 * technology_match
-        if final_score >= 0.45:
-            comparable_missions.append(RfpComparableMission(**mission.model_dump(), score_breakdown=RfpScoreBreakdown(sector_match=sector_match, project_type_match=project_match, business_need_match=need_match, constraint_match=constraint_match, technology_match=technology_match, final_score=final_score)))
-    comparable_missions.sort(key=lambda item: item.score_breakdown.final_score, reverse=True)
-    diagnostic = None if comparable_missions else "NO_COMPARABLE_MISSION"
-    return RfpResponse(
-        requirements=requirements,
-        proposal=RfpProposal(sections=_proposal_sections(requirements, citations)),
-        citations=[],
-        similar_missions=comparable_missions[:request.top_k],
-        evidence_validation_passed=False,
-        diagnostic=diagnostic,
-    )
+    return generate_rfp_proposal(request, settings)
 
 
 def _explicit_alternatives_absent(

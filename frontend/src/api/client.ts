@@ -38,23 +38,87 @@ function parseRfpResponse(value: unknown): RfpResponse {
   }
   const safeSections = sections ?? []
 
+  const rawSources = root.sources
+  const parsedSources: RfpResponse['sources'] = Array.isArray(rawSources)
+    ? rawSources.flatMap((val) => {
+        const s = asRecord(val)
+        if (!s || typeof s.id !== 'string' || typeof s.title !== 'string') return []
+        return [
+          {
+            id: s.id,
+            type: (s.type as 'brief' | 'internal_pdf' | 'web') || 'internal_pdf',
+            title: s.title,
+            documentId: (s.documentId ?? s.document_id) as number | undefined,
+            documentName: (s.documentName ?? s.document_name) as string | undefined,
+            page: s.page as number | undefined,
+            chunkId: (s.chunkId ?? s.chunk_id) as number | undefined,
+            excerpt: s.excerpt as string | undefined,
+            url: s.url as string | undefined,
+            publisher: s.publisher as string | undefined,
+            score: s.score as number | undefined,
+          },
+        ]
+      })
+    : []
+
+  const rawQuality = asRecord(root.quality)
+  const parsedQuality = rawQuality
+    ? {
+        passed: rawQuality.passed === true,
+        score: typeof rawQuality.score === 'number' ? rawQuality.score : 1.0,
+        coverageScore: typeof (rawQuality.coverageScore ?? rawQuality.coverage_score) === 'number' ? ((rawQuality.coverageScore ?? rawQuality.coverage_score) as number) : 1.0,
+        citationIntegrity: typeof (rawQuality.citationIntegrity ?? rawQuality.citation_integrity) === 'number' ? ((rawQuality.citationIntegrity ?? rawQuality.citation_integrity) as number) : 1.0,
+        sectionCount: typeof (rawQuality.sectionCount ?? rawQuality.section_count) === 'number' ? ((rawQuality.sectionCount ?? rawQuality.section_count) as number) : 19,
+        warnings: strings(rawQuality.warnings),
+      }
+    : undefined
+
   return {
+    requestId: typeof requestId === 'string' ? requestId : undefined,
     requirements: (asRecord(root.requirements) ?? {}) as unknown as RfpResponse['requirements'],
     proposal: {
       title: typeof proposal?.title === 'string' ? proposal.title : 'Proposition de réponse',
+      executiveSummary: typeof (proposal?.executiveSummary ?? proposal?.executive_summary) === 'string' ? ((proposal?.executiveSummary ?? proposal?.executive_summary) as string) : undefined,
       legacyMarkdown: legacyStructure ?? undefined,
       sections: safeSections.map((value, index) => {
         const section = asRecord(value)
         if (!section || typeof section.title !== 'string') {
           throw new ApiError(`La section ${index + 1} de la proposition est invalide. Réessayez.`, 502)
         }
+        const rawClaims = section.claims
+        const claimsList: unknown[] = Array.isArray(rawClaims) ? rawClaims : []
+        const parsedClaims = claimsList.flatMap((item) => {
+          const c = asRecord(item)
+          if (!c || typeof c.text !== 'string') return []
+          const rawIndexes = c.citationIndexes ?? c.citation_indexes
+          const indexes: unknown[] = Array.isArray(rawIndexes) ? rawIndexes : []
+          return [
+            {
+              id: typeof c.id === 'string' ? c.id : undefined,
+              text: c.text,
+              kind: (c.kind as any) || 'recommendation',
+              sourceIds: strings(c.sourceIds ?? c.source_ids),
+              citationIndexes: indexes.filter((cit): cit is number => typeof cit === 'number'),
+            },
+          ]
+        })
+
         const rawReferences = section.verifiedReferences ?? section.verified_references
         const references: unknown[] = Array.isArray(rawReferences) ? rawReferences : []
         const rawTables = section.tables
         const tables: unknown[] = Array.isArray(rawTables) ? rawTables : []
+
         return {
           key: typeof section.key === 'string' ? section.key : `section-${index + 1}`,
+          order: typeof section.order === 'number' ? section.order : index + 1,
           title: section.title,
+          status: (section.status as any) || 'complete',
+          statusReason: typeof (section.statusReason ?? section.status_reason) === 'string' ? ((section.statusReason ?? section.status_reason) as string) : undefined,
+          summary: typeof section.summary === 'string' ? section.summary : undefined,
+          narrative: strings(section.narrative),
+          claims: parsedClaims,
+          bullets: strings(section.bullets),
+          questions: strings(section.questions),
           factsFromBrief: strings(section.factsFromBrief ?? section.facts_from_brief),
           verifiedReferences: references.flatMap((item) => {
             if (typeof item === 'string') return [{ text: item, citationIndexes: [] }]
@@ -77,6 +141,7 @@ function parseRfpResponse(value: unknown): RfpResponse {
         }
       }),
     },
+    sources: parsedSources,
     citations: Array.isArray(root.citations) ? root.citations.flatMap((value) => {
       const citation = asRecord(value)
       const citationId = citation?.citationId ?? citation?.citation_id
@@ -116,6 +181,7 @@ function parseRfpResponse(value: unknown): RfpResponse {
       })
     })(),
     evidenceValidationPassed: root.evidenceValidationPassed === true || root.evidence_validation_passed === true,
+    quality: parsedQuality,
     diagnostic: typeof (root.diagnostic ?? root.evidence_diagnostic) === 'string' ? (root.diagnostic ?? root.evidence_diagnostic) as string : null,
   }
 }

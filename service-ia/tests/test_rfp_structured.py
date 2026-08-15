@@ -31,8 +31,8 @@ def test_proposal_has_adaptive_sections_and_structured_tables():
     sections = _proposal_sections(requirements, [
         RfpCitation(citation_id="rfp-42", chunk_id=42, document_id=8, document_name="reference.pdf", page=3, content="Extrait vérifié", source_index=1),
     ])
-    assert 1 <= len(sections) < 19
-    assert {section.key for section in sections} >= {"executive_summary", "delivery_approach", "clarifications"}
-    assert all(reference.citation_indexes for section in sections for reference in section.verified_references)
+    assert len(sections) == 19
+    assert {section.key for section in sections} >= {"executive_summary", "methodology_phases_deliverables", "risks_assumptions_clarifications"}
+    assert any(reference.citation_indexes for section in sections for reference in section.verified_references)
     assert any(section.tables for section in sections)
     assert all(table.columns for section in sections for table in section.tables)

@@ -165,6 +165,34 @@ export interface RfpCitation extends Citation {
   sourceIndex: number
 }
 
+export type ClaimKind =
+  | 'brief_fact'
+  | 'internal_evidence'
+  | 'web_evidence'
+  | 'recommendation'
+  | 'assumption'
+  | 'question'
+
+export type SectionStatus =
+  | 'complete'
+  | 'tailored'
+  | 'not_applicable'
+  | 'requires_clarification'
+
+export interface RfpSource {
+  id: string
+  type: 'brief' | 'internal_pdf' | 'web'
+  title: string
+  documentId?: number
+  documentName?: string
+  page?: number
+  chunkId?: number
+  excerpt?: string
+  url?: string
+  publisher?: string
+  score?: number
+}
+
 export interface RfpTable {
   title: string
   columns: string[]
@@ -172,33 +200,59 @@ export interface RfpTable {
 }
 
 export interface RfpClaim {
+  id?: string
   text: string
+  kind?: ClaimKind
+  sourceIds?: string[]
   citationIndexes: number[]
+  confidence?: number
 }
 
 export interface RfpSection {
   key: string
+  order?: number
   title: string
+  status?: SectionStatus
+  statusReason?: string
+  summary?: string
+  narrative?: string[]
+  claims?: RfpClaim[]
+  bullets?: string[]
+  tables: RfpTable[]
+  questions?: string[]
   factsFromBrief: string[]
   verifiedReferences: RfpClaim[]
   recommendations: string[]
   assumptionsToConfirm: string[]
-  tables: RfpTable[]
 }
 
 export interface RfpProposal {
   title: string
+  executiveSummary?: string
   sections: RfpSection[]
   /** Compatibility content from the retired RFP contract. Never treat it as a brief fact. */
   legacyMarkdown?: string
 }
 
+export interface RfpQualityReport {
+  passed: boolean
+  score: number
+  coverageScore: number
+  citationIntegrity: number
+  sectionCount: number
+  warnings: string[]
+}
+
 export interface RfpResponse {
+  requestId?: string
   requirements: Record<string, string | string[] | null>
   proposal: RfpProposal
+  sources?: RfpSource[]
   citations: RfpCitation[]
+  coverageReport?: Array<{ needId: string; covered: boolean; sectionKeys: string[] }>
   similarMissions: RfpComparableMission[]
   evidenceValidationPassed: boolean
+  quality?: RfpQualityReport
   diagnostic: string | null
 }
 

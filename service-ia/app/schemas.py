@@ -187,6 +187,30 @@ class GenerateResponse(BaseModel):
 # ---------------------------------------------------------------------------
 # /rfp — isolated proposal workflow. It deliberately does not reuse /search.
 # ---------------------------------------------------------------------------
+ClaimKind = Literal[
+    "brief_fact",
+    "internal_evidence",
+    "web_evidence",
+    "recommendation",
+    "assumption",
+    "question",
+]
+
+SectionStatus = Literal[
+    "complete",
+    "tailored",
+    "not_applicable",
+    "requires_clarification",
+]
+
+
+class RfpAtomicNeed(BaseModel):
+    id: str
+    text: str
+    category: str = "general"
+    source_excerpt: str | None = None
+
+
 class RfpRequirements(BaseModel):
     sector: str | None = None
     organization_type: str | None = None
@@ -197,6 +221,13 @@ class RfpRequirements(BaseModel):
     expected_deliverables: list[str] = Field(default_factory=list)
     scale: list[str] = Field(default_factory=list)
     timeline_and_urgency: list[str] = Field(default_factory=list)
+    budget: str | None = None
+    criteria: list[str] = Field(default_factory=list)
+    dependencies: list[str] = Field(default_factory=list)
+    exclusions: list[str] = Field(default_factory=list)
+    assumptions: list[str] = Field(default_factory=list)
+    ambiguities_and_questions: list[str] = Field(default_factory=list)
+    atomic_needs: list[RfpAtomicNeed] = Field(default_factory=list)
 
 
 class RfpScoreBreakdown(BaseModel):
@@ -222,6 +253,20 @@ class RfpCitation(BaseModel):
     source_index: int = Field(ge=1)
 
 
+class RfpSource(BaseModel):
+    id: str
+    type: Literal["brief", "internal_pdf", "web"]
+    title: str
+    document_id: int | None = None
+    document_name: str | None = None
+    page: int | None = None
+    chunk_id: int | None = None
+    excerpt: str | None = None
+    url: str | None = None
+    publisher: str | None = None
+    score: float | None = None
+
+
 class RfpTable(BaseModel):
     title: str
     columns: list[str] = Field(min_length=1)
@@ -229,39 +274,73 @@ class RfpTable(BaseModel):
 
 
 class RfpClaim(BaseModel):
-    """A proposal statement with explicit provenance instead of parsed text markers."""
+    """A proposal statement with explicit provenance."""
 
+    id: str | None = None
     text: str = Field(min_length=1)
+    kind: ClaimKind = "recommendation"
+    source_ids: list[str] = Field(default_factory=list)
     citation_indexes: list[int] = Field(default_factory=list)
+    confidence: float = Field(default=1.0, ge=0.0, le=1.0)
 
 
 class RfpSection(BaseModel):
     key: str
+    order: int = 1
     title: str
+    status: SectionStatus = "complete"
+    status_reason: str | None = None
+    summary: str | None = None
+    narrative: list[str] = Field(default_factory=list)
+    claims: list[RfpClaim] = Field(default_factory=list)
+    bullets: list[str] = Field(default_factory=list)
+    tables: list[RfpTable] = Field(default_factory=list)
+    questions: list[str] = Field(default_factory=list)
     facts_from_brief: list[str] = Field(default_factory=list)
     verified_references: list[RfpClaim] = Field(default_factory=list)
     recommendations: list[str] = Field(default_factory=list)
     assumptions_to_confirm: list[str] = Field(default_factory=list)
-    tables: list[RfpTable] = Field(default_factory=list)
 
 
 class RfpProposal(BaseModel):
     title: str = "Proposition de réponse"
-    # The proposal follows the brief rather than a fixed section-count template.
+    executive_summary: str | None = None
     sections: list[RfpSection] = Field(min_length=1)
+    legacy_markdown: str | None = None
+
+
+class RfpCoverageItem(BaseModel):
+    need_id: str
+    covered: bool = True
+    section_keys: list[str] = Field(default_factory=list)
+
+
+class RfpQualityReport(BaseModel):
+    passed: bool = True
+    score: float = Field(default=1.0, ge=0.0, le=1.0)
+    coverage_score: float = Field(default=1.0, ge=0.0, le=1.0)
+    citation_integrity: float = Field(default=1.0, ge=0.0, le=1.0)
+    section_count: int = 19
+    warnings: list[str] = Field(default_factory=list)
 
 
 class RfpRequest(BaseModel):
     description: str = Field(..., min_length=1)
     sector: str | None = None
     mission_type: str | None = None
-    top_k: int = Field(default=5, ge=1, le=10)
+    top_k: int = Field(default=5, ge=1, le=20)
+    request_id: str | None = None
+    web_research_enabled: bool = False
 
 
 class RfpResponse(BaseModel):
+    request_id: str | None = None
     requirements: RfpRequirements
     proposal: RfpProposal
+    sources: list[RfpSource] = Field(default_factory=list)
     citations: list[RfpCitation] = Field(default_factory=list)
+    coverage_report: list[RfpCoverageItem] = Field(default_factory=list)
     similar_missions: list[RfpComparableMission] = Field(default_factory=list)
     evidence_validation_passed: bool
+    quality: RfpQualityReport | None = None
     diagnostic: str | None = None
