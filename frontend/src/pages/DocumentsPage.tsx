@@ -132,7 +132,13 @@ export function DocumentsPage() {
                 </div>
               ))}
             </div>
-            <footer className="pagination"><span>Page {documents.data.number + 1} sur {documents.data.totalPages}</span><div><button className="icon-button" type="button" disabled={documents.data.first} onClick={() => setPage((value) => value - 1)} title="Page précédente" aria-label="Page précédente"><ArrowLeft size={18} /></button><button className="icon-button" type="button" disabled={documents.data.last} onClick={() => setPage((value) => value + 1)} title="Page suivante" aria-label="Page suivante"><ArrowRight size={18} /></button></div></footer>
+            <footer className="pagination">
+              <span className="pagination-label">Page <strong>{documents.data.number + 1}</strong> sur <strong>{documents.data.totalPages}</strong></span>
+              <div className="pagination-actions">
+                <button className="icon-button" type="button" disabled={documents.data.first} onClick={() => setPage((value) => value - 1)} title="Page précédente" aria-label="Page précédente"><ArrowLeft size={16} /></button>
+                <button className="icon-button" type="button" disabled={documents.data.last} onClick={() => setPage((value) => value + 1)} title="Page suivante" aria-label="Page suivante"><ArrowRight size={16} /></button>
+              </div>
+            </footer>
           </>
         )}
       </section>

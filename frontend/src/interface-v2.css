@@ -1219,6 +1219,72 @@ select {
   padding: 20px 24px;
 }
 
+/* Document directory card footer & pagination */
+.document-directory .pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 24px;
+  background: var(--color-surface-soft);
+  border-top: 1px solid var(--border-subtle);
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 500;
+  min-height: 52px;
+}
+
+.document-directory .pagination > span,
+.document-directory .pagination .pagination-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--text-secondary);
+  font-size: 12.5px;
+  font-weight: 500;
+}
+
+.document-directory .pagination strong {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.document-directory .pagination > div,
+.document-directory .pagination .pagination-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.document-directory .pagination .icon-button {
+  width: 32px;
+  height: 32px;
+  min-width: 32px;
+  padding: 0;
+  display: inline-grid;
+  place-items: center;
+  border-radius: 6px;
+  border: 1px solid var(--border-default);
+  background: #ffffff;
+  color: var(--text-secondary);
+  box-shadow: 0 1px 2px rgba(16, 42, 67, 0.04);
+  transition: all 140ms ease;
+}
+
+.document-directory .pagination .icon-button:hover:not(:disabled) {
+  border-color: var(--border-strong);
+  color: var(--color-blue-700);
+  background: #ffffff;
+  box-shadow: 0 2px 4px rgba(16, 42, 67, 0.08);
+}
+
+.document-directory .pagination .icon-button:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+  background: var(--color-surface-soft);
+  border-color: var(--border-subtle);
+  box-shadow: none;
+}
+
 .create-user-panel,
 .dossier-section {
   padding: 28px;
