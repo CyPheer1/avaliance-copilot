@@ -17,8 +17,10 @@ import java.util.Map;
 @Builder
 public class RfpResponse {
 
+    private String requestId;
     private Map<String, Object> requirements;
     private Map<String, Object> proposal;
+    private List<Map<String, Object>> coverageReport;
     private List<Map<String, Object>> citations;
     private List<Map<String, Object>> similarMissions;
     private boolean evidenceValidationPassed;

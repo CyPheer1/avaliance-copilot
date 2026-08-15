@@ -287,13 +287,32 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     # -----------------------------------------------------------------------
     @app.post("/rfp", dependencies=[Depends(require_internal_token)], response_model=RfpResponse)
     def rfp(request: RfpRequest) -> RfpResponse:
-        from .generation.ollama import OllamaUnavailableError
+        from .generation.rfp_proposal import RfpGenerationError
         from .generation.service import generate_rfp_structure
 
+        logger.info(
+            "RFP request received request_id=%s description_length=%s sector=%r mission_type=%r",
+            request.request_id,
+            len(request.description),
+            request.sector,
+            request.mission_type,
+        )
         try:
-            return generate_rfp_structure(request, resolved_settings)
-        except OllamaUnavailableError as exc:
-            raise HTTPException(status_code=503, detail="Ollama unavailable") from exc
+            response = generate_rfp_structure(request, resolved_settings)
+        except RfpGenerationError as exc:
+            logger.warning("RFP generation unavailable request_id=%s reason=%s", request.request_id, exc)
+            raise HTTPException(status_code=503, detail=str(exc)) from exc
+        except ValueError as exc:
+            logger.warning("RFP generation rejected request_id=%s reason=%s", request.request_id, exc)
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
+        logger.info(
+            "RFP response completed request_id=%s sections=%s citations=%s diagnostic=%s",
+            response.request_id,
+            len(response.proposal.sections),
+            len(response.citations),
+            response.diagnostic,
+        )
+        return response
 
     return app
 

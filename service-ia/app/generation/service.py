@@ -1583,10 +1583,11 @@ def generate_rfp_structure(request: RfpRequest, settings: Settings) -> RfpRespon
     from ..retrieval.vector_search import vector_search
 
     requirements = _extract_rfp_requirements(request.description, request.sector)
-    retrieval = vector_search(RetrieveRequest(query=request.description, top_k=min(10, request.top_k * 2), corpus_scope="PDF"))
-    citations = [citation for index, chunk in enumerate(retrieval.chunks, start=1) if (citation := _citation_for_chunk(chunk, index)) is not None]
-    if not citations:
-        return RfpResponse(requirements=requirements, proposal=RfpProposal(sections=_proposal_sections(requirements, [])), citations=[], similar_missions=[], evidence_validation_passed=False, diagnostic="NO_RELEVANT_PDF_EVIDENCE")
+    # Candidate retrieval is deliberately not promoted to proposal evidence.
+    # An RFP citation requires claim-level validation, which this legacy contract
+    # cannot express safely. Until then, recommendations remain uncited.
+    _ = vector_search(RetrieveRequest(query=request.description, top_k=min(10, request.top_k * 2), corpus_scope="PDF"))
+    citations: list[RfpCitation] = []
 
     from ..similar_missions.search import find_similar_missions
 
@@ -1613,7 +1614,15 @@ def generate_rfp_structure(request: RfpRequest, settings: Settings) -> RfpRespon
         if final_score >= 0.45:
             comparable_missions.append(RfpComparableMission(**mission.model_dump(), score_breakdown=RfpScoreBreakdown(sector_match=sector_match, project_type_match=project_match, business_need_match=need_match, constraint_match=constraint_match, technology_match=technology_match, final_score=final_score)))
     comparable_missions.sort(key=lambda item: item.score_breakdown.final_score, reverse=True)
-    return RfpResponse(requirements=requirements, proposal=RfpProposal(sections=_proposal_sections(requirements, citations)), citations=citations, similar_missions=comparable_missions[:request.top_k], evidence_validation_passed=True)
+    diagnostic = None if comparable_missions else "NO_COMPARABLE_MISSION"
+    return RfpResponse(
+        requirements=requirements,
+        proposal=RfpProposal(sections=_proposal_sections(requirements, citations)),
+        citations=[],
+        similar_missions=comparable_missions[:request.top_k],
+        evidence_validation_passed=False,
+        diagnostic=diagnostic,
+    )
 
 
 def _explicit_alternatives_absent(

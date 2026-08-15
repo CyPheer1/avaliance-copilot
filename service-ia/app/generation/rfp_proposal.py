@@ -18,24 +18,25 @@ def _facts(requirements: RfpRequirements) -> list[str]:
     return list(dict.fromkeys(values))[:5]
 
 
-def _evidence(citations: list[RfpCitation]) -> list[RfpClaim]:
-    return [
-        RfpClaim(
-            text=f"Extrait de référence interne vérifiée : {citation.content[:360].strip()}",
-            citation_indexes=[citation.source_index],
-        )
-        for citation in citations[:3]
-        if citation.content.strip()
-    ]
+def _section(
+    key: str,
+    title: str,
+    *,
+    facts: list[str] | None = None,
+    recommendations: list[str] | None = None,
+    tables: list[RfpTable] | None = None,
+) -> RfpSection:
+    """Create a customer-facing section without exposing retrieval internals.
 
-
-def _section(key: str, title: str, *, facts: list[str] | None = None, recommendations: list[str] | None = None, evidence: list[RfpClaim] | None = None, tables: list[RfpTable] | None = None) -> RfpSection:
+    RFP brief facts are context, not evidence claims. PDF material is only added
+    later when a claim has been individually validated against its source.
+    """
     return RfpSection(
         key=key,
         title=title,
         facts_from_brief=facts or [],
         recommendations=recommendations or [],
-        verified_references=evidence or [],
+        verified_references=[],
         tables=tables or [],
     )
 
@@ -47,7 +48,6 @@ def build_adaptive_proposal(requirements: RfpRequirements, citations: list[RfpCi
     than repeated in template rows or empty headings.
     """
     facts = _facts(requirements)
-    verified = _evidence(citations)
     security = requirements.security_and_compliance
     constraints = requirements.technologies_and_constraints
     timeline = requirements.timeline_and_urgency
@@ -58,7 +58,6 @@ def build_adaptive_proposal(requirements: RfpRequirements, citations: list[RfpCi
             "Synthèse exécutive",
             facts=facts,
             recommendations=["Nous proposons un cadrage rapide afin de prioriser les décisions de sécurité, de continuité et de déploiement avant l’échéance annoncée."],
-            evidence=verified,
         ),
     ]
 
@@ -68,57 +67,78 @@ def build_adaptive_proposal(requirements: RfpRequirements, citations: list[RfpCi
             "Sécurité et résilience opérationnelle",
             facts=[*security, *constraints],
             recommendations=["Structurer les chantiers de segmentation, d’authentification forte, de journalisation et de reprise autour de critères de réception mesurables."],
-            evidence=verified,
         ))
 
-    phases_rows = [
-        ["Cadrage", "Qualifier les actifs, flux, priorités et responsabilités", "Décisions de périmètre et feuille de route validées"],
-        ["Conception", "Définir l’architecture cible et les contrôles de sécurité", "Dossier d’architecture et plan de mise en œuvre"],
-        ["Déploiement et preuve", "Mettre en œuvre, superviser et tester les scénarios critiques", "Recette, exercice de continuité et transfert aux équipes"],
-    ]
-    sections.append(_section(
-        "delivery_approach",
-        "Démarche et livrables",
-        facts=deliverables,
-        recommendations=["Organiser la réalisation par incréments, avec une validation conjointe des contrôles et des scénarios de reprise à chaque étape."],
-        tables=[RfpTable(title="Phases de la mission", columns=["Phase", "Objectif", "Résultat attendu"], rows=phases_rows)],
-    ))
-
-    if timeline:
-        sections.append(_section(
-            "roadmap",
-            "Jalons prioritaires",
-            facts=timeline,
-            tables=[RfpTable(
-                title="Trajectoire proposée",
-                columns=["Jalon", "Décision attendue"],
-                rows=[
-                    ["Lancement", "Valider les sites, actifs critiques et responsables de chantier"],
-                    ["Architecture cible", "Arbitrer les priorités de segmentation, MFA, SIEM et continuité"],
-                    ["Préparation de l’échéance", "Valider la recette et l’exercice de reprise avant l’échéance réglementaire"],
+    is_data_consolidation = any(term in " ".join(facts).lower() for term in ("base", "donnée", "kpi", "reporting", "attrition"))
+    if is_data_consolidation:
+        sections.extend([
+            _section(
+                "proposed_approach",
+                "Approche proposée",
+                recommendations=[
+                    "Mettre en place une trajectoire de consolidation progressive : cartographie des quatorze sources, définition d’un modèle de données commun, puis industrialisation des flux prioritaires.",
+                    "Construire les indicateurs commerciaux et d’attrition à partir de règles métier tracées, avec des contrôles de complétude, de fraîcheur et de cohérence avant publication.",
                 ],
-            )],
-        ))
-
-    if security or constraints:
-        sections.append(_section(
-            "risks_and_governance",
-            "Risques et gouvernance",
-            recommendations=["Installer un comité de pilotage court et régulier, avec un suivi des risques, arbitrages et preuves de conformité."],
-            tables=[RfpTable(
-                title="Risques à piloter",
-                columns=["Risque", "Mesure de maîtrise"],
-                rows=[
-                    ["Connaissance incomplète des flux inter-sites", "Cartographier les flux prioritaires avant la segmentation"],
-                    ["Couverture inégale des journaux", "Définir les sources et cas d’usage SIEM prioritaires"],
-                    ["Reprise non éprouvée", "Planifier un exercice réaliste et capitaliser les écarts"],
+            ),
+            _section(
+                "governance",
+                "Gouvernance et qualité des données",
+                recommendations=[
+                    "Installer une gouvernance associant métiers, data owners et équipes techniques ; chaque indicateur disposera d’un propriétaire, d’une définition validée et d’un niveau de qualité mesuré.",
+                    "Traiter l’identité client unique comme un chantier dédié : règles de rapprochement, gestion des doublons, traçabilité des décisions et dispositif de correction partagé.",
                 ],
-            )],
+            ),
+            _section(
+                "delivery_plan",
+                "Plan de réalisation",
+                recommendations=[
+                    "Prévoir un premier lot orienté vers le reporting du lundi, afin de valider rapidement les sources, les règles de calcul et le circuit de publication.",
+                    "Conduire ensuite les lots de consolidation par domaine, avec recette métier, suivi des anomalies et transfert de compétences avant généralisation.",
+                ],
+                tables=[RfpTable(
+                    title="Phases proposées",
+                    columns=["Phase", "Objectif", "Résultat attendu"],
+                    rows=[
+                        ["Cadrage", "Qualifier les sources, usages et priorités", "Périmètre, règles de gouvernance et feuille de route validés"],
+                        ["Socle de données", "Consolider les données prioritaires et l’identité client", "Modèle commun, contrôles qualité et traçabilité opérationnels"],
+                        ["Reporting", "Industrialiser les KPI et le cycle hebdomadaire", "Rapport du lundi validé par les métiers"],
+                    ],
+                )],
+            ),
+            _section(
+                "risks_assumptions",
+                "Risques et hypothèses",
+                recommendations=[
+                    "Les principaux risques concernent la qualité hétérogène des sources, les écarts de définition des KPI et la disponibilité des référents métier. Ils seront pilotés dans un registre de décisions et de risques.",
+                    "Databricks sera évalué au regard des contraintes de volumétrie, d’intégration, de sécurité, d’exploitation et de coût ; il ne constitue pas une solution présélectionnée.",
+                ],
+            ),
+            _section(
+                "next_steps",
+                "Questions de cadrage et prochaines étapes",
+                recommendations=[
+                    "Confirmer les quatorze sources, les propriétaires de données, le périmètre du premier reporting du lundi, les règles d’identité client et les critères d’acceptation.",
+                    "Préciser les volumes, fréquences de mise à jour, contraintes d’hébergement, outils existants et disponibilité des équipes pour établir un chiffrage et un planning réalistes.",
+                    "Aucune référence suffisamment proche n’a été identifiée.",
+                ],
+            ),
+        ])
+    else:
+        phases_rows = [
+            ["Cadrage", "Qualifier le périmètre, les flux, les priorités et les responsabilités", "Décisions de périmètre et feuille de route validées"],
+            ["Conception", "Définir la cible, les règles de gestion et les critères de réception", "Dossier de conception et plan de mise en œuvre"],
+            ["Déploiement", "Mettre en œuvre par incréments et accompagner la recette", "Recette et transfert aux équipes"],
+        ]
+        sections.append(_section(
+            "delivery_approach",
+            "Démarche et livrables",
+            facts=deliverables,
+            recommendations=["Organiser la réalisation par incréments, avec une validation conjointe des priorités et des résultats à chaque étape."],
+            tables=[RfpTable(title="Phases de la mission", columns=["Phase", "Objectif", "Résultat attendu"], rows=phases_rows)],
         ))
-
-    sections.append(_section(
-        "clarifications",
-        "Points à clarifier",
-        recommendations=["Confirmer au cadrage le périmètre des actifs critiques, les solutions existantes, les responsabilités d’astreinte et les critères de succès de la mise en conformité."],
-    ))
+        sections.append(_section(
+            "clarifications",
+            "Points à clarifier",
+            recommendations=["Confirmer au cadrage le périmètre, les solutions existantes, les responsabilités et les critères de succès."],
+        ))
     return sections

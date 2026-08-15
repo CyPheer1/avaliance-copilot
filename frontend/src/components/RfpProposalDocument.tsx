@@ -11,7 +11,8 @@ export function RfpProposalDocument({ proposal }: { proposal: RfpProposal }) {
 }
 
 function StructuredSection({ section }: { section: RfpSection }) {
-  const prose = [...section.factsFromBrief, ...section.recommendations]
+  // Brief facts guide composition but are not copied into the customer document.
+  const prose = section.recommendations
   return <section className="rfp-proposal-section">
     <h3>{section.title}</h3>
     {prose.length > 0 && <div className="rfp-proposal-prose">{prose.map((item) => <p key={item}>{item}</p>)}</div>}

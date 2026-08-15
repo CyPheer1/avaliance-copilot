@@ -45,3 +45,7 @@ docker-compose.override.yml
 
 # Safety-first cleanup staging (never delete without explicit approval)
 .cleanup_quarantine/
+
+# Local backups and generated benchmark traces
+*.zip
+benchmarks/traces/

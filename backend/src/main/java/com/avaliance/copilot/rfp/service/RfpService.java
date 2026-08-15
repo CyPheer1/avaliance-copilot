@@ -30,16 +30,22 @@ public class RfpService {
             // The RFP route is isolated from /api/search. FastAPI retrieves PDF
             // evidence first, validates physical-page citations, then optionally
             // discovers synthetic comparable missions as a separate labelled source.
+            String requestId = UUID.randomUUID().toString();
             Map<String, Object> rfpRequest = new LinkedHashMap<>();
+            rfpRequest.put("request_id", requestId);
             rfpRequest.put("description", request.getDescription());
             if (request.getSector() != null) rfpRequest.put("sector", request.getSector());
             if (request.getMissionType() != null) rfpRequest.put("mission_type", request.getMissionType());
             if (request.getTopK() != null) rfpRequest.put("top_k", request.getTopK());
+            log.info("RFP request received requestId={} descriptionLength={} sector={} missionType={}",
+                    requestId, request.getDescription().length(), request.getSector(), request.getMissionType());
 
             Map<String, Object> rfpResponse = iaClientService.rfp(rfpRequest);
             return RfpResponse.builder()
+                    .requestId((String) rfpResponse.getOrDefault("request_id", requestId))
                     .requirements((Map<String, Object>) rfpResponse.getOrDefault("requirements", Map.of()))
                     .proposal((Map<String, Object>) rfpResponse.getOrDefault("proposal", Map.of()))
+                    .coverageReport((List<Map<String, Object>>) rfpResponse.getOrDefault("coverage_report", List.of()))
                     .citations((List<Map<String, Object>>) rfpResponse.getOrDefault("citations", List.of()))
                     .similarMissions((List<Map<String, Object>>) rfpResponse.getOrDefault("similar_missions", List.of()))
                     .evidenceValidationPassed(Boolean.TRUE.equals(rfpResponse.get("evidence_validation_passed")))

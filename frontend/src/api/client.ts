@@ -29,10 +29,11 @@ function parseRfpResponse(value: unknown): RfpResponse {
   const root = asRecord(value)
   const proposal = asRecord(root?.proposal)
   const sections = Array.isArray(proposal?.sections) ? proposal.sections : null
+  const requestId = root?.requestId ?? root?.request_id
   const legacyStructure = root && typeof (root.rfpStructure ?? root.rfp_structure) === 'string'
     ? (root.rfpStructure ?? root.rfp_structure) as string
     : null
-  if (!root || (!proposal || !sections) && !legacyStructure) {
+  if (!root || typeof requestId !== 'string' || !requestId || (!proposal || !sections) && !legacyStructure) {
     throw new ApiError('La réponse de proposition est invalide ou incomplète. Réessayez.', 502)
   }
   const safeSections = sections ?? []
