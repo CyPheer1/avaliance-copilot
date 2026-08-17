@@ -168,6 +168,14 @@ public class IaClientService {
         if (error instanceof IaServiceException iaServiceException) {
             return iaServiceException;
         }
+        if (error instanceof org.springframework.web.client.RestClientResponseException responseException) {
+            int statusCode = responseException.getStatusCode().value();
+            String responseBody = responseException.getResponseBodyAsString();
+            log.error("{} — HTTP status {}: {}", prefix, statusCode, responseBody);
+            if (statusCode == 422 || statusCode == 400) {
+                throw new IllegalArgumentException(responseBody.isBlank() ? "Requête invalide ou brief non exploitable" : responseBody);
+            }
+        }
         String message = error.getMessage() != null ? error.getMessage() : error.getClass().getSimpleName();
         String lowered = message.toLowerCase();
         if (lowered.contains("timeout") || lowered.contains("timed out") || lowered.contains("connection refused")) {
