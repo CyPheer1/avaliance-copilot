@@ -34,6 +34,7 @@ def _settings() -> Settings:
         database_url="postgresql://test:test@localhost:5432/test",
         min_source_similarity=0.55,
         generation_cache_max_entries=0,
+        generation_max_tokens=1500,
     )
 
 

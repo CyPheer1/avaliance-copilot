@@ -73,6 +73,15 @@ class IaClientServiceTest {
         assertThatThrownBy(() -> client(25).health()).isInstanceOf(IaServiceUnavailableException.class);
     }
 
+    @Test
+    void generateProposalMaps422ToIaValidationException() {
+        server.createContext("/rfp", exchange -> respond(exchange, 422, "{\"detail\":\"Le brief fourni ne contient aucun besoin exploitable pour construire une proposition.\"}"));
+
+        assertThatThrownBy(() -> client(1000).rfp(Map.of("description", "Bonjour !")))
+                .isInstanceOf(com.avaliance.copilot.config.IaValidationException.class)
+                .hasMessage("Le brief fourni ne contient aucun besoin exploitable pour construire une proposition.");
+    }
+
     private IaClientService client(int readTimeoutMs) {
         IaServiceProperties properties = new IaServiceProperties();
         properties.setBaseUrl("http://127.0.0.1:" + server.getAddress().getPort());

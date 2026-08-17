@@ -49,6 +49,12 @@ public class GlobalExceptionHandler {
         return buildResponse(HttpStatus.BAD_REQUEST, "Bad request", ex.getMessage());
     }
 
+    // --- 422 Unprocessable Entity (IA validation / RfpInputError) ---
+    @ExceptionHandler(IaValidationException.class)
+    public ResponseEntity<Map<String, Object>> handleIaValidation(IaValidationException ex) {
+        return buildResponse(HttpStatus.UNPROCESSABLE_ENTITY, "Unprocessable Entity", ex.getMessage());
+    }
+
     @ExceptionHandler(UnsupportedDocumentTypeException.class)
     public ResponseEntity<Map<String, Object>> handleUnsupportedDocument(UnsupportedDocumentTypeException ex) {
         return buildResponse(HttpStatus.UNSUPPORTED_MEDIA_TYPE, "Unsupported document", ex.getMessage());

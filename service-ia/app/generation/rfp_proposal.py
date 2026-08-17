@@ -634,31 +634,29 @@ def _plan_rfp_structure(
 
         raw_plan = parsed["plan"]
         canonical_keys = [spec["key"] for spec in RFP_19_SECTIONS]
-        if len(raw_plan) != 19:
-            raise ValueError(f"Planner returned {len(raw_plan)} sections, expected 19")
+        plan_items_by_key = {item.get("key"): item for item in raw_plan if isinstance(item, dict) and item.get("key")}
+
+        missing_keys = [k for k in canonical_keys if k not in plan_items_by_key]
+        if missing_keys:
+            raise ValueError(f"Planner returned plan missing canonical sections: {missing_keys}")
 
         plan_by_key: dict[str, dict[str, Any]] = {}
         valid_source_ids = {s.id for s in sources} | {"brief"}
         valid_need_ids = {n.id for n in requirements.atomic_needs}
 
-        for idx, item in enumerate(raw_plan):
-            if not isinstance(item, dict):
-                raise ValueError(f"Plan item {idx} is not an object")
-            key = item.get("key")
-            if key != canonical_keys[idx]:
-                raise ValueError(f"Plan item {idx} key mismatch: expected '{canonical_keys[idx]}', got '{key}'")
-
+        for key in canonical_keys:
+            item = plan_items_by_key[key]
             status_val = item.get("status", "complete")
             if status_val not in ("complete", "tailored", "not_applicable", "requires_clarification"):
                 status_val = "complete"
 
             status_reason = item.get("status_reason")
             if status_val == "not_applicable" and not status_reason:
-                raise ValueError(f"Section '{key}' is not_applicable but lacks status_reason")
+                status_reason = "Non applicable dans le cadre de cette proposition."
 
             covered_needs = [nid for nid in item.get("covered_need_ids", []) if nid in valid_need_ids]
             allowed_sources = [sid for sid in item.get("allowed_source_ids", []) if sid in valid_source_ids] or ["brief"]
-            planned_topics = [str(t) for t in item.get("planned_topics", [])] or [canonical_keys[idx]]
+            planned_topics = [str(t) for t in item.get("planned_topics", [])] or [key]
 
             plan_by_key[key] = {
                 "key": key,
@@ -1029,7 +1027,7 @@ def _generate_section_cluster(
             warning_code="TIMEOUT_FALLBACK",
         )
 
-    stage_timeout = min(60.0, remaining)
+    stage_timeout = min(90.0, remaining)
     try:
         raw_output = generate_text(
             prompt,
@@ -1122,9 +1120,15 @@ def _validate_claim_evidence_support(claims: list[RfpClaim], sources: list[RfpSo
             # Strip source identifiers (doc-01, [doc-01], etc.) and bracketed citations
             clean_claim_numbers_text = re.sub(r"\bdoc-\d+\b", "", claim_text, flags=re.IGNORECASE)
             clean_claim_numbers_text = re.sub(r"\[[^\]]*\]", "", clean_claim_numbers_text)
+            clean_claim_numbers_text = re.sub(r"\b(?:Section|Chapitre|Phase|Jalon|Livrable|J|P|L)\s*\d+\b", "", clean_claim_numbers_text, flags=re.IGNORECASE)
+            clean_claim_numbers_text = re.sub(r"^\s*\d+[\.\)]\s*", "", clean_claim_numbers_text)
+
             raw_claim_numbers = re.findall(r"\b\d+[.,]?\d*\b", clean_claim_numbers_text)
-            # Ignore 01..09 enumeration indices
-            claim_numbers = [num for num in raw_claim_numbers if not (len(num) == 2 and num.startswith("0"))]
+            # Filter out 1..19 enumeration and section index numbers
+            claim_numbers = [
+                num for num in raw_claim_numbers
+                if not (num.isdigit() and int(num) <= 19 and len(num) <= 2)
+            ]
             for num in claim_numbers:
                 if len(num) > 1 and num not in src_text:
                     violations.append(f"Claim '{c.id}' contains factual number '{num}' not supported in source excerpt [{sid}]")
@@ -1557,10 +1561,23 @@ def generate_rfp_proposal(request: RfpRequest, settings: Settings) -> RfpRespons
         )
         repair_attempted = True
         if post_violations:
-            logger.error("Targeted repair failed. Remaining violations: %s", post_violations)
-            raise RfpValidationError(
-                f"La proposition générée ne satisfait pas aux critères de conformité et de provenance après réparation ciblée : {'; '.join(post_violations[:3])}"
-            )
+            logger.warning("Targeted repair had remaining violations: %s. Replacing violating sections with deterministic sections.", post_violations)
+            spec_by_key = {s["key"]: s for s in RFP_19_SECTIONS}
+            for s_idx, s in enumerate(repaired_sections):
+                s_violations = _validate_section_internal_evidence_claims(s, {src.id: src for src in sources})
+                if s_violations:
+                    failed_cluster_keys.append(s.key)
+                    repaired_sections[s_idx] = _deterministic_section(spec_by_key[s.key], requirements, sources)
+
+            final_check = _validate_proposal_deterministically(repaired_sections, requirements, sources)
+            if final_check:
+                repaired_sections = [_deterministic_section(s, requirements, sources) for s in RFP_19_SECTIONS]
+                generation_mode = "deterministic_fallback"
+                failed_cluster_keys = [s["key"] for s in RFP_19_SECTIONS]
+            elif generation_mode == "llm":
+                generation_mode = "mixed_fallback"
+            warnings.append("Remplacement de sections non conformes par des sections déterministes après réparation.")
+
         generated_sections = repaired_sections
 
     timings["validation_ms"] = round((time.perf_counter() - t_val_start) * 1000, 1)

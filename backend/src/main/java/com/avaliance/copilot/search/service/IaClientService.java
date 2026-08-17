@@ -3,6 +3,7 @@ package com.avaliance.copilot.search.service;
 import com.avaliance.copilot.config.IaServiceException;
 import com.avaliance.copilot.config.IaServiceProperties;
 import com.avaliance.copilot.config.IaServiceUnavailableException;
+import com.avaliance.copilot.config.IaValidationException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.ParameterizedTypeReference;
@@ -172,7 +173,17 @@ public class IaClientService {
             int statusCode = responseException.getStatusCode().value();
             String responseBody = responseException.getResponseBodyAsString();
             log.error("{} — HTTP status {}: {}", prefix, statusCode, responseBody);
-            if (statusCode == 422 || statusCode == 400) {
+            if (statusCode == 422) {
+                String detail = responseBody;
+                try {
+                    com.fasterxml.jackson.databind.JsonNode root = new com.fasterxml.jackson.databind.ObjectMapper().readTree(responseBody);
+                    if (root.has("detail")) {
+                        detail = root.get("detail").asText();
+                    }
+                } catch (Exception ignored) {}
+                throw new IaValidationException(detail.isBlank() ? "Le brief fourni ne contient aucun besoin exploitable pour construire une proposition." : detail);
+            }
+            if (statusCode == 400) {
                 throw new IllegalArgumentException(responseBody.isBlank() ? "Requête invalide ou brief non exploitable" : responseBody);
             }
         }
