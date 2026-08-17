@@ -31,7 +31,7 @@ export function RfpPage() {
 
   return (
     <div className="page page--rfp">
-      <PageHeader eyebrow="Avant-vente" title="Construire une proposition" description="Générez un document de réponse structuré, exploitable et appuyé sur les missions comparables disponibles." />
+      <PageHeader eyebrow="Avant-vente" title="Construire une proposition" description="Générez un document de réponse structuré, exploitable et appuyé sur les preuves documentaires internes disponibles." />
       <form className="rfp-brief" onSubmit={submit} aria-busy={generation.isPending}>
         <header className="rfp-brief__header">
           <span className="rfp-brief__header-icon" aria-hidden="true"><FilePenLine size={17} /></span>
@@ -59,7 +59,7 @@ export function RfpPage() {
       <p className="rfp-guidance"><Info size={15} aria-hidden="true" /><span>Plus le brief est précis, plus la synthèse, les livrables, la démarche, les jalons et les questions de cadrage seront pertinents. Les références restent citées et les recommandations sont explicitement distinguées des faits établis.</span></p>
       {generation.isPending && <div className="rfp-status" role="status" aria-live="polite"><span className="rfp-status__avatar" aria-hidden="true"><img src={logoSrc} alt="" /></span><span className="rfp-status__label">Génération de la proposition…</span></div>}
       {generation.isError && <div className="rfp-error"><ErrorState message={errorMessage(generation.error)} /><button className="button button--secondary" type="button" onClick={retry}>Réessayer</button></div>}
-      {!generation.data && !generation.isPending && !generation.isError && <section className="rfp-empty"><FilePenLine size={24} /><h2>Le document de travail apparaîtra ici.</h2><p>Les missions comparables resteront visibles pour faciliter la relecture, l’alignement et la vérification.</p></section>}
+      {!generation.data && !generation.isPending && !generation.isError && <section className="rfp-empty"><FilePenLine size={24} /><h2>Le document de travail apparaîtra ici.</h2><p>Le document structuré en 19 sections et ses preuves documentaires apparaîtront ici pour vérification.</p></section>}
       {generation.data && (
         <section className="rfp-result reveal">
           <article className="rfp-document">
@@ -78,9 +78,21 @@ export function RfpPage() {
                       <span><strong>Preuves PDF :</strong> {generation.data.sources.length} document(s)</span>
                     )}
                     {generation.data.quality?.warnings && generation.data.quality.warnings.length > 0 && (
-                      <span style={{ color: '#eab308' }}><strong>Avertissements :</strong> {generation.data.quality.warnings.length}</span>
+                      <span style={{ color: '#eab308' }} title={generation.data.quality.warnings.join('\n')}>
+                        <strong>Avertissements :</strong> {generation.data.quality.warnings.length}
+                      </span>
                     )}
                   </div>
+                  {generation.data.quality?.warnings && generation.data.quality.warnings.length > 0 && (
+                    <div className="rfp-warnings-list" style={{ marginTop: '0.5rem', fontSize: '0.75rem', color: '#b45309', background: '#fef3c7', padding: '0.375rem 0.625rem', borderRadius: '4px' }}>
+                      <strong>Avertissements qualité :</strong>
+                      <ul style={{ margin: '0.25rem 0 0 1rem', padding: 0 }}>
+                        {generation.data.quality.warnings.map((w, idx) => (
+                          <li key={idx}>{w}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
                 </div>
               </div>
               <div className="document-actions">

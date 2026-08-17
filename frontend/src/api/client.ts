@@ -65,13 +65,38 @@ function parseRfpResponse(value: unknown): RfpResponse {
   const parsedQuality = rawQuality
     ? {
         passed: rawQuality.passed === true,
-        score: typeof rawQuality.score === 'number' ? rawQuality.score : 1.0,
-        coverageScore: typeof (rawQuality.coverageScore ?? rawQuality.coverage_score) === 'number' ? ((rawQuality.coverageScore ?? rawQuality.coverage_score) as number) : 1.0,
-        citationIntegrity: typeof (rawQuality.citationIntegrity ?? rawQuality.citation_integrity) === 'number' ? ((rawQuality.citationIntegrity ?? rawQuality.citation_integrity) as number) : 1.0,
-        sectionCount: typeof (rawQuality.sectionCount ?? rawQuality.section_count) === 'number' ? ((rawQuality.sectionCount ?? rawQuality.section_count) as number) : 19,
+        score: typeof rawQuality.score === 'number' ? rawQuality.score : undefined,
+        coverageScore: typeof (rawQuality.coverageScore ?? rawQuality.coverage_score) === 'number' ? ((rawQuality.coverageScore ?? rawQuality.coverage_score) as number) : undefined,
+        citationIntegrity: typeof (rawQuality.citationIntegrity ?? rawQuality.citation_integrity) === 'number' ? ((rawQuality.citationIntegrity ?? rawQuality.citation_integrity) as number) : undefined,
+        sectionCount: typeof (rawQuality.sectionCount ?? rawQuality.section_count) === 'number' ? ((rawQuality.sectionCount ?? rawQuality.section_count) as number) : undefined,
+        generationMode: (rawQuality.generationMode ?? rawQuality.generation_mode) as any,
+        plannerMode: (rawQuality.plannerMode ?? rawQuality.planner_mode) as any,
+        extractionMode: (rawQuality.extractionMode ?? rawQuality.extraction_mode) as any,
+        repairAttempted: Boolean(rawQuality.repairAttempted ?? rawQuality.repair_attempted),
+        failedClusterKeys: strings(rawQuality.failedClusterKeys ?? rawQuality.failed_cluster_keys),
+        coverageDetail: typeof (rawQuality.coverageDetail ?? rawQuality.coverage_detail) === 'number' ? ((rawQuality.coverageDetail ?? rawQuality.coverage_detail) as number) : undefined,
+        provenanceDetail: typeof (rawQuality.provenanceDetail ?? rawQuality.provenance_detail) === 'number' ? ((rawQuality.provenanceDetail ?? rawQuality.provenance_detail) as number) : undefined,
+        specificityDetail: typeof (rawQuality.specificityDetail ?? rawQuality.specificity_detail) === 'number' ? ((rawQuality.specificityDetail ?? rawQuality.specificity_detail) as number) : undefined,
+        solutionQualityDetail: typeof (rawQuality.solutionQualityDetail ?? rawQuality.solution_quality_detail) === 'number' ? ((rawQuality.solutionQualityDetail ?? rawQuality.solution_quality_detail) as number) : undefined,
+        governanceDetail: typeof (rawQuality.governanceDetail ?? rawQuality.governance_detail) === 'number' ? ((rawQuality.governanceDetail ?? rawQuality.governance_detail) as number) : undefined,
+        writingDetail: typeof (rawQuality.writingDetail ?? rawQuality.writing_detail) === 'number' ? ((rawQuality.writingDetail ?? rawQuality.writing_detail) as number) : undefined,
+        sourceQualityDetail: typeof (rawQuality.sourceQualityDetail ?? rawQuality.source_quality_detail) === 'number' ? ((rawQuality.sourceQualityDetail ?? rawQuality.source_quality_detail) as number) : undefined,
         warnings: strings(rawQuality.warnings),
       }
     : undefined
+
+  const rawClusterMetrics = Array.isArray(root.cluster_metrics ?? root.clusterMetrics)
+    ? ((root.cluster_metrics ?? root.clusterMetrics) as unknown[])
+    : []
+  const clusterMetrics = rawClusterMetrics.map((cm) => {
+    const r = asRecord(cm) ?? {}
+    return {
+      clusterKeys: strings(r.clusterKeys ?? r.cluster_keys),
+      mode: (r.mode === 'deterministic_fallback' ? 'deterministic_fallback' : 'llm') as 'llm' | 'deterministic_fallback',
+      durationMs: typeof (r.durationMs ?? r.duration_ms) === 'number' ? ((r.durationMs ?? r.duration_ms) as number) : 0,
+      warningCode: typeof (r.warningCode ?? r.warning_code) === 'string' ? ((r.warningCode ?? r.warning_code) as string) : null,
+    }
+  })
 
   return {
     requestId: typeof requestId === 'string' ? requestId : undefined,
@@ -98,13 +123,12 @@ function parseRfpResponse(value: unknown): RfpResponse {
               text: c.text,
               kind: (c.kind as any) || 'recommendation',
               sourceIds: strings(c.sourceIds ?? c.source_ids),
-              citationIndexes: indexes.filter((cit): cit is number => typeof cit === 'number'),
+              citationIndexes: indexes.filter((n): n is number => typeof n === 'number'),
+              confidence: typeof c.confidence === 'number' ? c.confidence : 1.0,
             },
           ]
         })
 
-        const rawReferences = section.verifiedReferences ?? section.verified_references
-        const references: unknown[] = Array.isArray(rawReferences) ? rawReferences : []
         const rawTables = section.tables
         const tables: unknown[] = Array.isArray(rawTables) ? rawTables : []
 
@@ -120,13 +144,23 @@ function parseRfpResponse(value: unknown): RfpResponse {
           bullets: strings(section.bullets),
           questions: strings(section.questions),
           factsFromBrief: strings(section.factsFromBrief ?? section.facts_from_brief),
-          verifiedReferences: references.flatMap((item) => {
-            if (typeof item === 'string') return [{ text: item, citationIndexes: [] }]
-            const claim = asRecord(item)
-            const rawIndexes = claim?.citationIndexes ?? claim?.citation_indexes
+          verifiedReferences: (Array.isArray(section.verifiedReferences ?? section.verified_references)
+            ? (section.verifiedReferences ?? section.verified_references) as unknown[]
+            : []
+          ).flatMap((item) => {
+            const c = asRecord(item)
+            if (!c || typeof c.text !== 'string') return []
+            const rawIndexes = c.citationIndexes ?? c.citation_indexes
             const indexes: unknown[] = Array.isArray(rawIndexes) ? rawIndexes : []
-            return claim && typeof claim.text === 'string'
-              ? [{ text: claim.text, citationIndexes: indexes.filter((citation): citation is number => typeof citation === 'number') }]
+            return typeof c.text === 'string'
+              ? [{
+                id: typeof c.id === 'string' ? c.id : undefined,
+                text: c.text,
+                kind: (c.kind as any) || 'internal_evidence',
+                sourceIds: strings(c.sourceIds ?? c.source_ids),
+                citationIndexes: indexes.filter((n): n is number => typeof n === 'number'),
+                confidence: typeof c.confidence === 'number' ? c.confidence : 1.0,
+              }]
               : []
           }),
           recommendations: strings(section.recommendations),
@@ -152,6 +186,7 @@ function parseRfpResponse(value: unknown): RfpResponse {
       return typeof citationId === 'string' && typeof chunkId === 'number' && typeof documentId === 'number' && typeof documentName === 'string' && typeof citation?.page === 'number' && typeof citation.content === 'string' && typeof sourceIndex === 'number'
         ? [{ citationId, chunkId, documentId, documentName, page: citation.page, content: citation.content, sourceIndex } as RfpResponse['citations'][number]] : []
     }) : [],
+    clusterMetrics,
     similarMissions: (() => {
       const rawMissions = root.similarMissions ?? root.similar_missions
       const missions: unknown[] = Array.isArray(rawMissions) ? rawMissions : []

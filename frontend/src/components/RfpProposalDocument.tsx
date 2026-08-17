@@ -100,6 +100,46 @@ function StructuredSection({ section }: { section: RfpSection }) {
                   </ul>
                 </div>
               )}
+              {section.claims.some((c) => c.kind === 'recommendation') && (
+                <div className="rfp-claim-group rfp-claim-group--recommendation">
+                  <strong>Recommandations méthodologiques & techniques</strong>
+                  <ul>
+                    {section.claims.filter((c) => c.kind === 'recommendation').map((c, idx) => (
+                      <li key={c.id || idx}>{c.text}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              {section.claims.some((c) => c.kind === 'assumption') && (
+                <div className="rfp-claim-group rfp-claim-group--assumption">
+                  <strong>Hypothèses structurantes (à confirmer)</strong>
+                  <ul>
+                    {section.claims.filter((c) => c.kind === 'assumption').map((c, idx) => (
+                      <li key={c.id || idx}>{c.text}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              {section.claims.some((c) => c.kind === 'question') && (
+                <div className="rfp-claim-group rfp-claim-group--question">
+                  <strong>Points de cadrage à clarifier</strong>
+                  <ul>
+                    {section.claims.filter((c) => c.kind === 'question').map((c, idx) => (
+                      <li key={c.id || idx}>{c.text}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              {section.claims.some((c) => c.kind === 'web_evidence') && (
+                <div className="rfp-claim-group rfp-claim-group--web">
+                  <strong>Sources externes</strong>
+                  <ul>
+                    {section.claims.filter((c) => c.kind === 'web_evidence').map((c, idx) => (
+                      <li key={c.id || idx}>{c.text}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
             </div>
           )}
 

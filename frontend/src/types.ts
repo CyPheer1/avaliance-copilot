@@ -234,12 +234,31 @@ export interface RfpProposal {
   legacyMarkdown?: string
 }
 
+export interface RfpClusterMetric {
+  clusterKeys: string[]
+  mode: 'llm' | 'deterministic_fallback'
+  durationMs: number
+  warningCode?: string | null
+}
+
 export interface RfpQualityReport {
   passed: boolean
-  score: number
-  coverageScore: number
+  score?: number | null
+  coverageScore?: number | null
   citationIntegrity?: number | null
-  sectionCount: number
+  sectionCount?: number | null
+  generationMode?: 'llm' | 'mixed_fallback' | 'deterministic_fallback' | 'repair_failed' | null
+  plannerMode?: 'llm' | 'deterministic_fallback' | null
+  extractionMode?: 'llm' | 'deterministic_fallback' | null
+  repairAttempted?: boolean
+  failedClusterKeys?: string[]
+  coverageDetail?: number | null
+  provenanceDetail?: number | null
+  specificityDetail?: number | null
+  solutionQualityDetail?: number | null
+  governanceDetail?: number | null
+  writingDetail?: number | null
+  sourceQualityDetail?: number | null
   warnings: string[]
 }
 
@@ -250,6 +269,7 @@ export interface RfpResponse {
   sources?: RfpSource[]
   citations: RfpCitation[]
   coverageReport?: Array<{ needId: string; covered: boolean; sectionKeys: string[] }>
+  clusterMetrics?: RfpClusterMetric[]
   similarMissions: RfpComparableMission[]
   evidenceValidationPassed: boolean
   quality?: RfpQualityReport
