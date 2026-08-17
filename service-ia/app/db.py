@@ -61,6 +61,12 @@ def get_connection() -> Generator[Any, None, None]:
     if _pool is None:
         raise RuntimeError("Connection pool not initialised. Call init_pool() first.")
     conn = _pool.getconn()
+    if getattr(conn, "closed", 0) != 0:
+        try:
+            _pool.putconn(conn, close=True)
+        except Exception:
+            pass
+        conn = _pool.getconn()
     try:
         yield conn
         conn.commit()

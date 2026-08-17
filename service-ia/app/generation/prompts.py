@@ -264,13 +264,14 @@ RÈGLES DE RÉDACTION STRICTES :
    - `assumption` : hypothèse structurante à confirmer (source_ids: []).
    - `question` : question de cadrage ou point à clarifier (source_ids: []).
 4. Si une section n'est pas applicable au brief (ex. migration s'il n'y a pas de migration), marque son status en "not_applicable" avec un `status_reason` court et justifié.
-5. Ne cite aucune référence synthétique ni mission imaginaire. N'invente aucun budget, date calendaire fixe ou nom d'éditeur non fourni.
-6. Retourne uniquement l'objet JSON valide, sans balise <think>.
+5. N'INVENTE AUCUN chiffre ou engagement non sourcé : aucun pourcentage de disponibilité/SLA (ex. 99.9%, 99.8%), aucune plage horaire de support garanti (ex. 24h/24, 7j/7, 24/7), aucun budget, aucune date calendaire fixe, aucun effectif en ETP ou durée contractuelle sans qualification. Décris le dispositif organisationnel sans inventer d'horaires ou de chiffres stricts, ou qualifie-les explicitement de "cible indicative à confirmer lors du cadrage".
+6. Ne cite aucune référence synthétique ni mission imaginaire. N'utilise que les sources internes PDF listées ci-dessus.
+7. Retourne uniquement l'objet JSON valide, sans balise <think>.
 
 JSON :"""
 
 RFP_REPAIR_PROMPT = """Tu es le contrôleur qualité avant-vente chez Avaliance.
-La proposition générée comporte des non-conformités à corriger immédiatement :
+La proposition générée comporte des non-conformités bloquantes à corriger immédiatement :
 {violations}
 
 BRIEF :
@@ -282,7 +283,10 @@ SOURCES VALIDES :
 PROPOSITION À CORRIGER :
 {raw_proposal}
 
-Corrige l'ensemble des violations en retournant l'objet JSON complet et rigoureusement conforme au schéma.
+INSTRUCTIONS DE CORRECTION :
+1. Corrige précisément chaque violation listée ci-dessus.
+2. Pour toute valeur chiffrée, pourcentage/SLA (ex. 99.8%), plage de support (ex. 24h/24, 7j/7), budget, durée ou date non présente dans le brief ou les sources, supprime la valeur ou qualifie-la explicitement avec la mention "(modalités indicatives à confirmer lors du cadrage)".
+3. Conserve la structure complète des sections demandées et retourne l'objet JSON rigoureusement conforme au schéma.
 
 JSON :"""
 
@@ -307,7 +311,9 @@ Preuves vérifiées :
 
 Réponse :"""
 
-INSUFFICIENT_INFORMATION = (
+INSUFFICIENT_INFORMATION = "Information insuffisante dans le corpus pour répondre de manière fiable."
+
+RFP_INSUFFICIENT_INFORMATION = (
     "Nous ne disposons pas de référence suffisamment comparable dans notre base pour construire une proposition fondée sur cette demande. "
     "Précisez le secteur, la nature de la prestation attendue et les contraintes techniques, ou sollicitez un cadrage avec un directeur de mission."
 )

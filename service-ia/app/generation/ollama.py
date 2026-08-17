@@ -76,9 +76,11 @@ def generate_text(
     *,
     max_tokens: int,
     output_schema: dict[str, Any] | None = None,
+    timeout_seconds: float | None = None,
 ) -> str:
     """Generate one non-streamed response with the configured local model."""
-    timeout = httpx.Timeout(settings.ollama_timeout_seconds, connect=5.0)
+    effective_timeout = timeout_seconds if timeout_seconds is not None else settings.ollama_timeout_seconds
+    timeout = httpx.Timeout(effective_timeout, connect=5.0)
     try:
         with httpx.Client(timeout=timeout) as client:
             payload: dict[str, Any] = {
@@ -116,9 +118,11 @@ def generate_text_stream(
     *,
     max_tokens: int,
     output_schema: dict[str, Any] | None = None,
+    timeout_seconds: float | None = None,
 ) -> Generator[str, None, None]:
     """Stream tokens from Ollama one by one using stream=True."""
-    timeout = httpx.Timeout(settings.ollama_timeout_seconds, connect=5.0)
+    effective_timeout = timeout_seconds if timeout_seconds is not None else settings.ollama_timeout_seconds
+    timeout = httpx.Timeout(effective_timeout, connect=5.0)
     try:
         with httpx.Client(timeout=timeout) as client:
             payload: dict[str, Any] = {

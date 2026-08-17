@@ -287,7 +287,12 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     # -----------------------------------------------------------------------
     @app.post("/rfp", dependencies=[Depends(require_internal_token)], response_model=RfpResponse)
     def rfp(request: RfpRequest) -> RfpResponse:
-        from .generation.rfp_proposal import RfpGenerationError
+        from .generation.rfp_proposal import (
+            RfpGenerationError,
+            RfpInfrastructureError,
+            RfpInputError,
+            RfpValidationError,
+        )
         from .generation.service import generate_rfp_structure
 
         logger.info(
@@ -299,7 +304,13 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         )
         try:
             response = generate_rfp_structure(request, resolved_settings)
-        except RfpGenerationError as exc:
+        except RfpInputError as exc:
+            logger.warning("RFP generation invalid input request_id=%s reason=%s", request.request_id, exc)
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
+        except RfpValidationError as exc:
+            logger.warning("RFP generation validation failed request_id=%s reason=%s", request.request_id, exc)
+            raise HTTPException(status_code=502, detail=str(exc)) from exc
+        except (RfpInfrastructureError, RfpGenerationError) as exc:
             logger.warning("RFP generation unavailable request_id=%s reason=%s", request.request_id, exc)
             raise HTTPException(status_code=503, detail=str(exc)) from exc
         except ValueError as exc:

@@ -5,8 +5,10 @@ from __future__ import annotations
 import json
 import logging
 import re
+import time
 import unicodedata
-from typing import Any
+from dataclasses import dataclass, field
+from typing import Any, Literal
 
 from ..schemas import (
     ClaimKind,
@@ -15,6 +17,7 @@ from ..schemas import (
     RfpAtomicNeed,
     RfpCitation,
     RfpClaim,
+    RfpClusterMetric,
     RfpCoverageItem,
     RfpProposal,
     RfpQualityReport,
@@ -40,9 +43,79 @@ from .prompts import (
 
 logger = logging.getLogger(__name__)
 
+# ============================================================================
+# Global Constants & Deadline
+# ============================================================================
+GLOBAL_REQUEST_DEADLINE_S: float = 540.0
+
+
+def _remaining_budget(deadline: float) -> float:
+    """Return remaining seconds until monotonic deadline."""
+    return max(0.0, deadline - time.monotonic())
+
+
+# ============================================================================
+# Typed Exceptions
+# ============================================================================
+class RfpInputError(ValueError):
+    """Raised when user-provided brief is empty, greeting-only, or lacks actionable requirements (HTTP 422)."""
+
+
+class RfpInfrastructureError(RuntimeError):
+    """Raised when local Ollama generation or required infrastructure fails (HTTP 503)."""
+
+
+class RfpValidationError(RuntimeError):
+    """Raised when proposal fails deterministic validation or targeted repair (HTTP 502)."""
+
 
 class RfpGenerationError(RuntimeError):
-    """Raised when an RFP cannot be generated or validated."""
+    """Backward-compatible alias for general RFP generation errors."""
+
+
+# ============================================================================
+# Request-Local Typed Result Objects
+# ============================================================================
+@dataclass
+class BriefExtractionResult:
+    requirements: RfpRequirements
+    mode: Literal["llm", "deterministic_fallback"]
+    warnings: list[str] = field(default_factory=list)
+    duration_ms: float = 0.0
+
+
+@dataclass
+class PlannerResult:
+    plan: dict[str, dict[str, Any]]
+    mode: Literal["llm", "deterministic_fallback"]
+    warnings: list[str] = field(default_factory=list)
+    duration_ms: float = 0.0
+
+
+@dataclass
+class ClusterGenerationResult:
+    sections: list[RfpSection]
+    mode: Literal["llm", "deterministic_fallback"]
+    warnings: list[str] = field(default_factory=list)
+    duration_ms: float = 0.0
+    cluster_keys: list[str] = field(default_factory=list)
+    warning_code: str | None = None
+    input_tokens: int = 0
+    output_tokens: int = 0
+    tokens_per_sec: float = 0.0
+    is_valid_json: bool = True
+
+
+@dataclass
+class PipelineMetadata:
+    extraction_mode: Literal["llm", "deterministic_fallback"]
+    planner_mode: Literal["llm", "deterministic_fallback"]
+    generation_mode: Literal["llm", "mixed_fallback", "deterministic_fallback", "repair_failed"]
+    repair_attempted: bool
+    failed_cluster_keys: list[str]
+    cluster_results: list[ClusterGenerationResult]
+    warnings: list[str]
+    timings: dict[str, float]
 
 
 # ============================================================================
@@ -165,8 +238,18 @@ RFP_19_SECTIONS: list[dict[str, Any]] = [
     },
 ]
 
+# 5 Canonical Writer Clusters
+RFP_WRITER_CLUSTERS: list[list[int]] = [
+    [1, 2, 3, 4],       # Cluster 1: Synthesis & Context
+    [5, 6, 7, 8],       # Cluster 2: Scope & Solution
+    [9, 10, 11, 12],    # Cluster 3: Interfaces, Security & Methodology
+    [13, 14, 15, 16],   # Cluster 4: Governance, Testing & Change
+    [17, 18, 19],       # Cluster 5: Operations, Risks & References
+]
+
 
 def _fold_text(value: str) -> str:
+    """Strip accents and lower-case text for case-insensitive comparisons."""
     return "".join(
         c for c in unicodedata.normalize("NFKD", value.lower())
         if not unicodedata.combining(c)
@@ -174,10 +257,30 @@ def _fold_text(value: str) -> str:
 
 
 # ============================================================================
+# Strict Raw JSON Parsing
+# ============================================================================
+def _strict_parse_json(raw: str) -> dict[str, Any] | list[Any]:
+    """Strictly parse JSON without permissive extraction or tolerating commentary."""
+    if not raw or not raw.strip():
+        raise ValueError("Model returned an empty response")
+    if "<think>" in raw.lower() or "</think>" in raw.lower():
+        raise ValueError("Model output contains <think> tags outside valid JSON")
+    if "```" in raw:
+        raise ValueError("Model output contains markdown code fences outside valid JSON")
+    stripped = raw.strip()
+    if not (stripped.startswith("{") and stripped.endswith("}")) and not (stripped.startswith("[") and stripped.endswith("]")):
+        raise ValueError("Model output contains leading or trailing commentary outside JSON root")
+    parsed = json.loads(stripped)
+    if not isinstance(parsed, (dict, list)):
+        raise ValueError("Parsed JSON root is not an object or array")
+    return parsed
+
+
+# ============================================================================
 # Step 1: Brief Normalization & Structured Extraction
 # ============================================================================
 def _deterministic_extract_requirements(description: str, sector: str | None) -> RfpRequirements:
-    """Extract atomic needs and structured fields deterministically from brief text."""
+    """Extract atomic needs with exact character offsets deterministically from brief text."""
     folded = _fold_text(description)
     inferred_sector = sector or next(
         (val for val in ("sante", "telecom", "transport", "logistique", "energie", "assurance", "banque", "secteur public") if val in folded),
@@ -202,7 +305,6 @@ def _deterministic_extract_requirements(description: str, sector: str | None) ->
         None,
     )
 
-    # Split on sentences, commas, and 'et' conjunctions
     raw_parts = [
         s.strip()
         for s in re.split(r"(?<=[.!?;])\s+|\n+|,\s*|\s+et\s+", description.strip())
@@ -212,6 +314,7 @@ def _deterministic_extract_requirements(description: str, sector: str | None) ->
         raw_parts = [description.strip()]
 
     atomic_needs: list[RfpAtomicNeed] = []
+    search_cursor = 0
     for idx, part in enumerate(raw_parts, start=1):
         clean_text = part.rstrip(".!?;")
         category = "general"
@@ -224,7 +327,30 @@ def _deterministic_extract_requirements(description: str, sector: str | None) ->
             category = "delivery"
         elif any(w in f_part for w in ("cout", "budget", "delai", "urgence", "echeance", "fin d'annee")):
             category = "constraint"
-        atomic_needs.append(RfpAtomicNeed(id=f"need-{idx:02d}", text=clean_text, category=category, source_excerpt=part))
+
+        # Compute exact character offsets in original description
+        start_idx = description.find(part, search_cursor)
+        if start_idx == -1:
+            start_idx = description.find(part)
+        if start_idx != -1:
+            end_idx = start_idx + len(part)
+            search_cursor = end_idx
+            exact_excerpt = description[start_idx:end_idx]
+        else:
+            start_idx = None
+            end_idx = None
+            exact_excerpt = part
+
+        atomic_needs.append(
+            RfpAtomicNeed(
+                id=f"need-{idx:02d}",
+                text=clean_text,
+                category=category,
+                source_excerpt=exact_excerpt,
+                start_offset=start_idx,
+                end_offset=end_idx,
+            )
+        )
 
     sentences = [s.strip() for s in re.split(r"(?<=[.!?;])\s+|\n+", description.strip()) if len(s.strip()) > 3]
     if not sentences and description.strip():
@@ -247,20 +373,117 @@ def _deterministic_extract_requirements(description: str, sector: str | None) ->
     )
 
 
-def extract_brief_requirements(description: str, sector: str | None, settings: Settings) -> RfpRequirements:
-    """Analyze client brief and extract requirements via LLM with deterministic fallback."""
+def extract_brief_requirements(
+    description: str,
+    sector: str | None,
+    settings: Settings,
+    deadline: float | None = None,
+) -> BriefExtractionResult:
+    """Analyze client brief and extract requirements via LLM with exact brief provenance or fallback."""
+    t_start = time.perf_counter()
     stripped = description.strip()
     if not stripped or len(stripped) < 3:
-        raise RfpGenerationError("Le brief fourni est vide.")
+        raise RfpInputError("Le brief fourni est vide.")
 
-    # Greeting-only or trivial inputs must be rejected
+    # Greeting-only or trivial inputs must be rejected with HTTP 422
     folded = _fold_text(stripped)
-    clean_folded = re.sub(r"[!?. ]+", "", folded)
-    greetings = {"bonjour", "salut", "hello", "hi", "bonsoir", "coucou", "test", "bonjourtoutlemonde"}
-    if clean_folded in greetings or folded in greetings:
-        raise RfpGenerationError("Le brief fourni ne contient aucun besoin exploitable pour construire une proposition.")
+    clean_folded = re.sub(r"[\W_]+", "", folded)
+    words = set(re.findall(r"[a-z0-9]+", folded))
+    greetings = {"bonjour", "salut", "hello", "hi", "bonsoir", "coucou", "test", "bonjourtoutlemonde", "hey", "merci", "aide", "aidezmoi"}
+    if clean_folded in greetings or folded in greetings or (len(words) <= 3 and words.issubset(greetings | {"le", "la", "un", "une", "de", "du", "pour", "mon", "notre", "projet"})):
+        raise RfpInputError("Le brief fourni ne contient aucun besoin exploitable pour construire une proposition.")
 
-    return _deterministic_extract_requirements(description, sector)
+    remaining = _remaining_budget(deadline) if deadline else settings.ollama_timeout_seconds
+    stage_timeout = min(30.0, remaining)
+    prompt = RFP_BRIEF_EXTRACTION_PROMPT.format(description=stripped)
+
+    try:
+        raw_output = generate_text(
+            prompt,
+            settings,
+            max_tokens=800,
+            output_schema=RFP_BRIEF_SCHEMA,
+            timeout_seconds=stage_timeout,
+        )
+        parsed = _strict_parse_json(raw_output)
+        if not isinstance(parsed, dict):
+            raise ValueError("Extraction JSON root is not an object")
+
+        raw_needs = parsed.get("atomic_needs", [])
+        if not isinstance(raw_needs, list) or len(raw_needs) < 2:
+            raise ValueError(f"Extracted atomic_needs count ({len(raw_needs)}) is insufficient")
+
+        resolved_needs: list[RfpAtomicNeed] = []
+        for idx, need_dict in enumerate(raw_needs, start=1):
+            if not isinstance(need_dict, dict):
+                raise ValueError("Atomic need is not a valid object")
+            text = str(need_dict.get("text", "")).strip()
+            category = str(need_dict.get("category", "general"))
+            excerpt = need_dict.get("source_excerpt")
+
+            candidate = excerpt if excerpt and isinstance(excerpt, str) else text
+            candidate_clean = candidate.strip().rstrip(".!?;")
+            start_pos = stripped.find(candidate_clean)
+            if start_pos == -1:
+                c_folded = _fold_text(candidate_clean)
+                b_folded = _fold_text(stripped)
+                f_pos = b_folded.find(c_folded)
+                if f_pos != -1:
+                    start_pos = f_pos
+                    candidate_clean = stripped[f_pos:f_pos + len(c_folded)]
+
+            if start_pos == -1:
+                raise ValueError(f"Atomic need '{candidate_clean}' cannot be mapped to an exact brief substring")
+
+            end_pos = start_pos + len(candidate_clean)
+            exact_excerpt = stripped[start_pos:end_pos]
+            need_id = str(need_dict.get("id") or f"need-{idx:02d}")
+
+            resolved_needs.append(
+                RfpAtomicNeed(
+                    id=need_id,
+                    text=text or exact_excerpt,
+                    category=category,
+                    source_excerpt=exact_excerpt,
+                    start_offset=start_pos,
+                    end_offset=end_pos,
+                )
+            )
+
+        inferred_sector = sector or parsed.get("sector")
+        req = RfpRequirements(
+            sector=inferred_sector,
+            organization_type=parsed.get("organization_type"),
+            business_problem=parsed.get("business_problem", []),
+            project_type=parsed.get("project_type", []),
+            technologies_and_constraints=parsed.get("technologies_and_constraints", []),
+            security_and_compliance=parsed.get("security_and_compliance", []),
+            expected_deliverables=parsed.get("expected_deliverables", []),
+            scale=parsed.get("scale", []),
+            timeline_and_urgency=parsed.get("timeline_and_urgency", []),
+            budget=parsed.get("budget"),
+            criteria=parsed.get("criteria", []),
+            dependencies=parsed.get("dependencies", []),
+            exclusions=parsed.get("exclusions", []),
+            assumptions=parsed.get("assumptions", []),
+            ambiguities_and_questions=parsed.get("ambiguities_and_questions", []),
+            atomic_needs=resolved_needs,
+        )
+        duration_ms = round((time.perf_counter() - t_start) * 1000, 1)
+        return BriefExtractionResult(requirements=req, mode="llm", warnings=[], duration_ms=duration_ms)
+
+    except RfpInputError:
+        raise
+    except Exception as exc:
+        logger.info("Brief LLM extraction failed or excerpt mapping rejected: %s. Using deterministic fallback.", exc)
+        det_req = _deterministic_extract_requirements(description, sector)
+        duration_ms = round((time.perf_counter() - t_start) * 1000, 1)
+        return BriefExtractionResult(
+            requirements=det_req,
+            mode="deterministic_fallback",
+            warnings=["Extraction des exigences réalisée via le moteur déterministe."],
+            duration_ms=duration_ms,
+        )
 
 
 # ============================================================================
@@ -300,7 +523,6 @@ def retrieve_rfp_pdf_evidence(
         if chunk.document_id is None or not chunk.document_name or chunk.page is None:
             continue
 
-        # Relevance threshold check: require meaningful cross-encoder signal (> 0.25), strong lexical match (>= 1.0), or solid cosine similarity (>= 0.55)
         has_reranker_signal = chunk.score is not None and chunk.score > 0.25
         v_sim = chunk.vector_score if chunk.vector_score is not None else chunk.relevance_score
         has_solid_vector_sim = v_sim is not None and v_sim >= 0.55
@@ -309,7 +531,6 @@ def retrieve_rfp_pdf_evidence(
         if not (has_reranker_signal or has_solid_vector_sim or has_strong_text_match):
             continue
 
-        # Diversify: max 3 chunks per document
         count = doc_chunk_count.get(chunk.document_id, 0)
         if count >= 3:
             continue
@@ -352,14 +573,13 @@ def retrieve_rfp_pdf_evidence(
 # ============================================================================
 # Step 3: Planner Stage
 # ============================================================================
-def _plan_rfp_structure(
+def _deterministic_planner_output(
     requirements: RfpRequirements,
     sources: list[RfpSource],
-    settings: Settings,
-    description: str,
 ) -> dict[str, dict[str, Any]]:
-    """Establish a structured 19-section plan with deterministic completeness."""
+    """Deterministic 19-section plan fallback."""
     plan_by_key: dict[str, dict[str, Any]] = {}
+    valid_source_ids = [s.id for s in sources]
     for spec in RFP_19_SECTIONS:
         key = spec["key"]
         plan_by_key[key] = {
@@ -368,20 +588,113 @@ def _plan_rfp_structure(
             "status_reason": None,
             "covered_need_ids": [n.id for n in requirements.atomic_needs[:2]],
             "planned_topics": [spec["title"]],
-            "allowed_source_ids": [s.id for s in sources] if key == "references_differentiation_next_steps" else ["brief"],
+            "allowed_source_ids": valid_source_ids if key == "references_differentiation_next_steps" else ["brief"],
+            "tables_planned": [],
+            "questions_planned": [],
         }
     return plan_by_key
 
 
+def _plan_rfp_structure(
+    requirements: RfpRequirements,
+    sources: list[RfpSource],
+    settings: Settings,
+    description: str,
+    deadline: float | None = None,
+) -> PlannerResult:
+    """Establish a structured 19-section plan using LLM with deterministic fallback."""
+    t_start = time.perf_counter()
+    atomic_needs_str = json.dumps(
+        [{"id": n.id, "text": n.text, "category": n.category} for n in requirements.atomic_needs],
+        ensure_ascii=False,
+    )
+    sources_str = _format_sources_for_prompt(sources)
+    section_specs_str = "\n".join([f"{s['order']}. [{s['key']}] {s['title']} : {s['description']}" for s in RFP_19_SECTIONS])
+    plan_prompt = RFP_PLANNER_PROMPT.format(
+        brief=description,
+        atomic_needs=atomic_needs_str,
+        sources=sources_str,
+        section_specs=section_specs_str,
+    )
+
+    remaining = _remaining_budget(deadline) if deadline else settings.ollama_timeout_seconds
+    stage_timeout = min(60.0, remaining)
+
+    try:
+        raw_output = generate_text(
+            plan_prompt,
+            settings,
+            max_tokens=1600,
+            output_schema=RFP_PLANNER_SCHEMA,
+            timeout_seconds=stage_timeout,
+        )
+        parsed = _strict_parse_json(raw_output)
+        if not isinstance(parsed, dict) or "plan" not in parsed or not isinstance(parsed["plan"], list):
+            raise ValueError("Planner output missing 'plan' list")
+
+        raw_plan = parsed["plan"]
+        canonical_keys = [spec["key"] for spec in RFP_19_SECTIONS]
+        if len(raw_plan) != 19:
+            raise ValueError(f"Planner returned {len(raw_plan)} sections, expected 19")
+
+        plan_by_key: dict[str, dict[str, Any]] = {}
+        valid_source_ids = {s.id for s in sources} | {"brief"}
+        valid_need_ids = {n.id for n in requirements.atomic_needs}
+
+        for idx, item in enumerate(raw_plan):
+            if not isinstance(item, dict):
+                raise ValueError(f"Plan item {idx} is not an object")
+            key = item.get("key")
+            if key != canonical_keys[idx]:
+                raise ValueError(f"Plan item {idx} key mismatch: expected '{canonical_keys[idx]}', got '{key}'")
+
+            status_val = item.get("status", "complete")
+            if status_val not in ("complete", "tailored", "not_applicable", "requires_clarification"):
+                status_val = "complete"
+
+            status_reason = item.get("status_reason")
+            if status_val == "not_applicable" and not status_reason:
+                raise ValueError(f"Section '{key}' is not_applicable but lacks status_reason")
+
+            covered_needs = [nid for nid in item.get("covered_need_ids", []) if nid in valid_need_ids]
+            allowed_sources = [sid for sid in item.get("allowed_source_ids", []) if sid in valid_source_ids] or ["brief"]
+            planned_topics = [str(t) for t in item.get("planned_topics", [])] or [canonical_keys[idx]]
+
+            plan_by_key[key] = {
+                "key": key,
+                "status": status_val,
+                "status_reason": status_reason,
+                "covered_need_ids": covered_needs,
+                "planned_topics": planned_topics,
+                "allowed_source_ids": allowed_sources,
+                "tables_planned": item.get("tables_planned", []),
+                "questions_planned": item.get("questions_planned", []),
+            }
+
+        duration_ms = round((time.perf_counter() - t_start) * 1000, 1)
+        return PlannerResult(plan=plan_by_key, mode="llm", warnings=[], duration_ms=duration_ms)
+
+    except Exception as exc:
+        logger.info("Planner LLM call failed: %s. Using deterministic planner fallback.", exc)
+        det_plan = _deterministic_planner_output(requirements, sources)
+        duration_ms = round((time.perf_counter() - t_start) * 1000, 1)
+        return PlannerResult(
+            plan=det_plan,
+            mode="deterministic_fallback",
+            warnings=["Planification des sections réalisée via le moteur déterministe."],
+            duration_ms=duration_ms,
+        )
+
+
 # ============================================================================
-# Step 4: Formatting & Proposal Generation
+# Step 4: Multi-Pass 5-Cluster Section Writing
 # ============================================================================
 def _format_sources_for_prompt(sources: list[RfpSource]) -> str:
     if not sources:
         return "Aucune source PDF interne disponible pour cette demande."
     lines = []
     for s in sources:
-        excerpt = s.excerpt[:200].strip() + ("..." if len(s.excerpt) > 200 else "")
+        excerpt = (s.excerpt or "")[:250].strip() + ("..." if len(s.excerpt or "") > 250 else "")
         lines.append(f"- [{s.id}] {s.document_name} (Page {s.page}) : « {excerpt} »")
     return "\n".join(lines)
 
@@ -540,7 +853,7 @@ def _deterministic_section(
         narrative = ["Avaliance s'engage sur une méthodologie transparente et un pilotage rigoureux."]
         if sources:
             for s in sources:
-                excerpt_short = s.excerpt[:150].strip() + ("..." if len(s.excerpt) > 150 else "")
+                excerpt_short = (s.excerpt or "")[:150].strip() + ("..." if len(s.excerpt or "") > 150 else "")
                 claims.append(
                     RfpClaim(
                         id=f"claim-ref-{len(claims)+1}",
@@ -578,43 +891,252 @@ def _deterministic_section(
     )
 
 
+def _parse_model_sections_output(
+    parsed: dict[str, Any],
+    expected_specs: list[dict[str, Any]],
+    sources: list[RfpSource],
+) -> list[RfpSection]:
+    """Parse strictly validated JSON dict into typed RfpSection objects."""
+    if not isinstance(parsed, dict) or "sections" not in parsed or not isinstance(parsed["sections"], list):
+        raise ValueError("JSON output missing 'sections' list")
+
+    sections: list[RfpSection] = []
+    spec_by_key = {s["key"]: s for s in expected_specs}
+
+    for s_dict in parsed["sections"]:
+        if not isinstance(s_dict, dict):
+            continue
+        key = s_dict.get("key")
+        spec = spec_by_key.get(key)
+        if not spec:
+            continue
+
+        title = s_dict.get("title") or spec["title"]
+        order = spec["order"]
+        status_val = s_dict.get("status", "complete")
+        if status_val not in ("complete", "tailored", "not_applicable", "requires_clarification"):
+            status_val = "complete"
+
+        narrative = s_dict.get("narrative") or []
+        if isinstance(narrative, str):
+            narrative = [narrative]
+
+        claims = [
+            RfpClaim(
+                id=c.get("id") or f"claim-{c_idx:03d}",
+                text=str(c.get("text", "")).strip(),
+                kind=c.get("kind", "recommendation") if c.get("kind") in ("brief_fact", "internal_evidence", "web_evidence", "recommendation", "assumption", "question") else "recommendation",
+                source_ids=[str(sid) for sid in c.get("source_ids", [])],
+            )
+            for c_idx, c in enumerate(s_dict.get("claims", []), start=1)
+            if isinstance(c, dict) and c.get("text")
+        ]
+
+        bullets = [str(b) for b in s_dict.get("bullets", []) if isinstance(b, str) and b.strip()]
+        questions = [str(q) for q in s_dict.get("questions", []) if isinstance(q, str) and q.strip()]
+
+        tables = [
+            RfpTable(
+                title=t.get("title", "Tableau"),
+                columns=[str(col) for col in t.get("columns", ["Élément", "Description"])],
+                rows=[[str(cell) for cell in row] for row in t.get("rows", []) if isinstance(row, list)],
+            )
+            for t in s_dict.get("tables", [])
+            if isinstance(t, dict) and t.get("columns") and isinstance(t.get("rows"), list)
+        ]
+
+        facts = [c.text for c in claims if c.kind == "brief_fact"]
+        verified_refs = [c for c in claims if c.kind == "internal_evidence"]
+        recommendations = [c.text for c in claims if c.kind == "recommendation"] or narrative
+        assumptions = [c.text for c in claims if c.kind in ("assumption", "question")] or questions
+
+        sections.append(
+            RfpSection(
+                key=key,
+                order=order,
+                title=title,
+                status=status_val,
+                status_reason=s_dict.get("status_reason"),
+                summary=s_dict.get("summary"),
+                narrative=narrative,
+                claims=claims,
+                bullets=bullets,
+                tables=tables,
+                questions=questions,
+                facts_from_brief=facts,
+                verified_references=verified_refs,
+                recommendations=recommendations,
+                assumptions_to_confirm=assumptions,
+            )
+        )
+
+    return sections
+
+
+def _generate_section_cluster(
+    cluster_order_list: list[int],
+    planner_entries: dict[str, dict[str, Any]],
+    requirements: RfpRequirements,
+    sources: list[RfpSource],
+    settings: Settings,
+    description: str,
+    deadline: float | None = None,
+) -> ClusterGenerationResult:
+    """Generate one bounded cluster of canonical sections with real HTTP timeout."""
+    t_start = time.perf_counter()
+    cluster_specs = [RFP_19_SECTIONS[i - 1] for i in cluster_order_list]
+    cluster_keys = [s["key"] for s in cluster_specs]
+
+    # Filter planner guidance and sources relevant to this cluster
+    cluster_guidance = [
+        f"- Section {s['order']} [{s['key']}] {s['title']} : Statut={planner_entries.get(s['key'], {}).get('status', 'complete')}, "
+        f"Thèmes={planner_entries.get(s['key'], {}).get('planned_topics', [])}, "
+        f"Besoins={planner_entries.get(s['key'], {}).get('covered_need_ids', [])}"
+        for s in cluster_specs
+    ]
+    specs_formatted = "\n".join([f"{s['order']}. [{s['key']}] {s['title']} : {s['description']}" for s in cluster_specs])
+    specs_with_plan = f"{specs_formatted}\n\nORIENTATIONS DU PLAN :\n" + "\n".join(cluster_guidance)
+
+    # Allowed sources for cluster
+    allowed_source_ids: set[str] = set()
+    for s in cluster_specs:
+        allowed_source_ids.update(planner_entries.get(s["key"], {}).get("allowed_source_ids", []))
+    if any(s["key"] == "references_differentiation_next_steps" for s in cluster_specs):
+        allowed_source_ids.update(src.id for src in sources)
+
+    filtered_sources = [src for src in sources if src.id in allowed_source_ids] or sources
+
+    brief_formatted = _format_brief_for_prompt(requirements, description)
+    sources_formatted = _format_sources_for_prompt(filtered_sources)
+
+    prompt = RFP_SECTION_BATCH_PROMPT.format(
+        section_specs=specs_with_plan,
+        brief=brief_formatted,
+        sources=sources_formatted,
+    )
+
+    remaining = _remaining_budget(deadline) if deadline else settings.ollama_timeout_seconds
+    if remaining <= 1.0:
+        logger.warning("Global deadline budget exhausted before cluster %s", cluster_keys)
+        det_sections = [_deterministic_section(s, requirements, sources) for s in cluster_specs]
+        duration_ms = round((time.perf_counter() - t_start) * 1000, 1)
+        return ClusterGenerationResult(
+            sections=det_sections,
+            mode="deterministic_fallback",
+            warnings=[f"Délai global dépassé pour le cluster {cluster_keys}"],
+            duration_ms=duration_ms,
+            cluster_keys=cluster_keys,
+            warning_code="TIMEOUT_FALLBACK",
+        )
+
+    stage_timeout = min(60.0, remaining)
+    try:
+        raw_output = generate_text(
+            prompt,
+            settings,
+            max_tokens=1800,
+            output_schema=RFP_SECTION_BATCH_SCHEMA,
+            timeout_seconds=stage_timeout,
+        )
+        parsed = _strict_parse_json(raw_output)
+        cluster_sections = _parse_model_sections_output(parsed, cluster_specs, sources)
+
+        # Verify all expected keys exist in cluster output
+        present_keys = {s.key for s in cluster_sections}
+        missing_keys = [k for k in cluster_keys if k not in present_keys]
+        if missing_keys:
+            raise ValueError(f"Cluster output missing sections: {missing_keys}")
+
+        duration_ms = round((time.perf_counter() - t_start) * 1000, 1)
+        return ClusterGenerationResult(
+            sections=cluster_sections,
+            mode="llm",
+            warnings=[],
+            duration_ms=duration_ms,
+            cluster_keys=cluster_keys,
+        )
+
+    except Exception as exc:
+        logger.info("Cluster %s generation failed: %s. Using deterministic cluster fallback.", cluster_keys, exc)
+        det_sections = [_deterministic_section(s, requirements, sources) for s in cluster_specs]
+        duration_ms = round((time.perf_counter() - t_start) * 1000, 1)
+        return ClusterGenerationResult(
+            sections=det_sections,
+            mode="deterministic_fallback",
+            warnings=[f"Génération déterministe pour le cluster {cluster_keys}"],
+            duration_ms=duration_ms,
+            cluster_keys=cluster_keys,
+            warning_code="CLUSTER_FALLBACK",
+        )
+
+
 # ============================================================================
-# Step 5: Deterministic Validator & Quality Gates
+# Step 5: Deterministic Validator & Factual-Value Quality Gates
 # ============================================================================
 _FRENCH_STOPWORDS = {
     "les", "des", "une", "par", "sur", "pour", "avec", "dans", "sont", "cette",
     "nous", "vous", "leur", "plus", "tout", "tous", "mais", "donc", "ainsi", "bien",
+    "être", "avoir", "faire", "pourra", "seront", "selon", "entre", "comme",
 }
 
+# Regex to detect numbers, percentages, dates, SLAs, durations, budgets
+_FACTUAL_PATTERNS = [
+    re.compile(r"\b\d+[.,]?\d*\s*%"),                                                      # percentages: 99.9%, 10%
+    re.compile(r"T0\s*\+\s*\d+\s*(?:semaines?|jours?|mois|ans?|heures?|weeks?|days?|months?)\b", re.IGNORECASE), # T0 + 2 semaines
+    re.compile(r"\b\d{1,2}/\d{1,2}/\d{2,4}\b"),                                           # dates: 12/08/2026
+    re.compile(r"\b\d+\s*(?:k€|M€|€|\$|EUR|kEUR|MEUR)(?!\w)", re.IGNORECASE),            # budgets: 150 k€, 2 M€
+    re.compile(r"\b\d+\s*(?:ETP|consultants?|personnes?|FTE|experts?)\b", re.IGNORECASE),  # team sizes: 4 ETP
+    re.compile(r"\b(?:24/7|24h/24|7j/7|5j/7)\b", re.IGNORECASE),                          # SLAs: 24/7, 5j/7
+    re.compile(r"garantie\s+de\s+\d+\s*(?:mois|ans?)\b", re.IGNORECASE),                  # warranty: garantie de 6 mois
+]
 
-def _check_proposal_quality(
-    sections: list[RfpSection],
-    requirements: RfpRequirements,
-) -> tuple[bool, list[str]]:
-    """Verify that all atomic needs from the brief are addressed."""
-    if not requirements.atomic_needs:
-        return True, []
 
-    full_raw = " ".join([
-        f"{s.title} {' '.join(s.narrative)} {' '.join(c.text for c in s.claims)} {' '.join(s.recommendations)} {' '.join(s.facts_from_brief)}"
-        for s in sections
-    ])
-    folded_full_text = _fold_text(full_raw)
+def _validate_claim_evidence_support(claims: list[RfpClaim], sources: list[RfpSource]) -> list[str]:
+    """Validate that internal_evidence claims are semantically supported by cited PDF excerpts."""
+    violations: list[str] = []
+    source_map = {s.id: s for s in sources}
 
-    missing_needs: list[str] = []
-    for need in requirements.atomic_needs:
-        folded_need = _fold_text(need.text)
-        terms = [t for t in re.findall(r"[a-z0-9]{3,}", folded_need) if t not in _FRENCH_STOPWORDS]
-        if terms:
-            match_count = sum(1 for term in terms if term in folded_full_text)
-            covered = match_count >= max(1, (len(terms) + 1) // 2)
-        else:
-            covered = folded_need in folded_full_text
+    for c in claims:
+        if c.kind != "internal_evidence":
+            continue
+        if not c.source_ids:
+            violations.append(f"Claim '{c.id}' is marked internal_evidence but has no source IDs")
+            continue
 
-        if not covered:
-            missing_needs.append(need.id)
+        for sid in c.source_ids:
+            if sid == "brief":
+                violations.append(f"Claim '{c.id}' is marked internal_evidence but cites 'brief'")
+                continue
+            src = source_map.get(sid)
+            if not src or not src.excerpt:
+                violations.append(f"Claim '{c.id}' cites unknown or empty source '{sid}'")
+                continue
 
-    return len(missing_needs) == 0, missing_needs
+            # Semantic Support Validation: token & entity overlap
+            claim_text = c.text
+            src_text = src.excerpt
+            folded_claim = _fold_text(claim_text)
+            folded_src = _fold_text(src_text)
+
+            # Check numbers/percentages in claim appear in source excerpt
+            # Strip source identifiers (doc-01, [doc-01], etc.) and bracketed citations
+            clean_claim_numbers_text = re.sub(r"\bdoc-\d+\b", "", claim_text, flags=re.IGNORECASE)
+            clean_claim_numbers_text = re.sub(r"\[[^\]]*\]", "", clean_claim_numbers_text)
+            raw_claim_numbers = re.findall(r"\b\d+[.,]?\d*\b", clean_claim_numbers_text)
+            # Ignore 01..09 enumeration indices
+            claim_numbers = [num for num in raw_claim_numbers if not (len(num) == 2 and num.startswith("0"))]
+            for num in claim_numbers:
+                if len(num) > 1 and num not in src_text:
+                    violations.append(f"Claim '{c.id}' contains factual number '{num}' not supported in source excerpt [{sid}]")
+
+            # Check significant keyword tokens
+            claim_terms = [t for t in re.findall(r"[a-z0-9]{4,}", folded_claim) if t not in _FRENCH_STOPWORDS]
+            if claim_terms:
+                matched_terms = [t for t in claim_terms if t in folded_src]
+                if len(matched_terms) < max(1, len(claim_terms) // 3):
+                    violations.append(f"Claim '{c.id}' lacks sufficient semantic overlap with cited source excerpt [{sid}]")
+
+    return violations
 
 
 def _validate_proposal_deterministically(
@@ -622,7 +1144,7 @@ def _validate_proposal_deterministically(
     requirements: RfpRequirements,
     sources: list[RfpSource],
 ) -> list[str]:
-    """Inspect proposal against all strict P0 deterministic validation rules."""
+    """Inspect proposal against all strict P0 deterministic validation rules across ALL visible fields."""
     violations: list[str] = []
     valid_source_ids = {s.id for s in sources} | {"brief"}
 
@@ -635,14 +1157,60 @@ def _validate_proposal_deterministically(
     if actual_keys != expected_keys:
         violations.append(f"Section ordering mismatch: expected {expected_keys}, got {actual_keys}")
 
-    # 2. Check each section's status and reasons
-    seen_claim_ids: set[str] = set()
-    for s in sections:
-        if s.status == "not_applicable" and not s.status_reason:
-            violations.append(f"Section {s.key} has status 'not_applicable' but lacks a required status_reason")
+    # Brief fact text corpus for grounding brief_facts
+    brief_facts_corpus = " ".join([
+        n.text + " " + (n.source_excerpt or "")
+        for n in requirements.atomic_needs
+    ])
+    folded_brief = _fold_text(brief_facts_corpus)
 
-        # 3. Claims validation
+    seen_claim_ids: set[str] = set()
+    all_claims: list[RfpClaim] = []
+
+    for s in sections:
+        # 2. Section status check
+        if s.status == "not_applicable" and not s.status_reason:
+            violations.append(f"Section '{s.key}' has status 'not_applicable' but lacks a required status_reason")
+
+        # 3. Scan all visible content fields for raw reasoning or non-JSON artifacts
+        visible_texts: list[str] = []
+        if s.summary:
+            visible_texts.append(s.summary)
+        visible_texts.extend(s.narrative)
+        visible_texts.extend(s.bullets)
+        visible_texts.extend(s.questions)
+        visible_texts.extend(s.recommendations)
+        visible_texts.extend(s.assumptions_to_confirm)
+        if s.status_reason:
+            visible_texts.append(s.status_reason)
+
+        for t in s.tables:
+            visible_texts.append(t.title)
+            visible_texts.extend(t.columns)
+            for row in t.rows:
+                visible_texts.extend(row)
+
+        for text in visible_texts:
+            if "<think>" in text.lower() or "</think>" in text.lower():
+                violations.append(f"Section '{s.key}' contains forbidden <think> tags in visible content")
+            if "```" in text:
+                violations.append(f"Section '{s.key}' contains forbidden markdown code fences in visible content")
+
+            # Check unsupported commitments / factual values in prose not marked 'indicatif' or 'à confirmer'
+            if s.status != "not_applicable":
+                for pat in _FACTUAL_PATTERNS:
+                    for match in pat.finditer(text):
+                        matched_val = match.group(0)
+                        is_in_brief = matched_val in brief_facts_corpus or _fold_text(matched_val) in folded_brief
+                        is_clarification = any(kw in text.lower() for kw in ("indicatif", "à confirmer", "a confirmer", "hypothèse", "estimer", "prévisionnel", "jalon", "phase"))
+                        if not is_in_brief and not is_clarification:
+                            violations.append(
+                                f"Section '{s.key}' contains unsupported factual commitment '{matched_val}' not found in brief and not marked 'indicatif' or 'à confirmer'"
+                            )
+
+        # 4. Claims validation
         for c in s.claims:
+            all_claims.append(c)
             if c.id:
                 if c.id in seen_claim_ids:
                     violations.append(f"Duplicate claim ID: {c.id}")
@@ -650,74 +1218,317 @@ def _validate_proposal_deterministically(
 
             for sid in c.source_ids:
                 if sid not in valid_source_ids:
-                    violations.append(f"Section {s.key} claim '{c.id}' has unknown source ID '{sid}'")
+                    violations.append(f"Section '{s.key}' claim '{c.id}' has unknown source ID '{sid}'")
 
             if c.kind == "internal_evidence":
                 if not c.source_ids or not any(sid.startswith("doc-") and sid in valid_source_ids for sid in c.source_ids):
-                    violations.append(f"Section {s.key} claim '{c.id}' is marked internal_evidence but has no valid internal source ID")
+                    violations.append(f"Section '{s.key}' claim '{c.id}' is marked internal_evidence but lacks valid internal source ID")
+            elif c.kind == "brief_fact":
+                if "brief" not in c.source_ids:
+                    violations.append(f"Section '{s.key}' claim '{c.id}' is marked brief_fact but does not cite 'brief'")
 
-        # 4. Table rectangularity check
+        # 5. Table rectangularity check
         for t in s.tables:
             if not t.columns:
-                violations.append(f"Section {s.key} has a table with no columns")
+                violations.append(f"Section '{s.key}' table '{t.title}' has no columns")
             col_count = len(t.columns)
             for r_idx, row in enumerate(t.rows):
                 if len(row) != col_count:
-                    violations.append(f"Section {s.key} table '{t.title}' row {r_idx} length {len(row)} != columns length {col_count}")
+                    violations.append(f"Section '{s.key}' table '{t.title}' row {r_idx} length {len(row)} != columns length {col_count}")
+
+    # 6. Semantic evidence support validation
+    evidence_violations = _validate_claim_evidence_support(all_claims, sources)
+    violations.extend(evidence_violations)
 
     return violations
 
 
-def validate_and_repair_proposal(
+# ============================================================================
+# Step 6: Targeted Single-Attempt Repair
+# ============================================================================
+def _repair_proposal_targeted(
     sections: list[RfpSection],
+    violations: list[str],
     requirements: RfpRequirements,
     sources: list[RfpSource],
     settings: Settings,
     description: str,
-) -> tuple[list[RfpSection], RfpQualityReport, list[RfpCoverageItem]]:
-    """Verify 19 sections, ordering, claim citations, coverage, and format cleanly."""
-    valid_source_ids = {s.id for s in sources}
+    deadline: float | None = None,
+) -> tuple[list[RfpSection], list[str]]:
+    """Execute one targeted repair on violating sections only and re-validate."""
+    logger.info("Executing targeted repair for %d violations...", len(violations))
+
+    violating_keys: set[str] = set()
+    for v in violations:
+        match = re.search(r"Section '([^']+)'", v)
+        if match:
+            violating_keys.add(match.group(1))
+
+    if not violating_keys:
+        violating_keys = {s.key for s in sections[:4]}
+
+    violating_specs = [spec for spec in RFP_19_SECTIONS if spec["key"] in violating_keys]
+    violating_sections = [s for s in sections if s.key in violating_keys]
+
+    violating_json = json.dumps(
+        [
+            {
+                "key": s.key,
+                "title": s.title,
+                "status": s.status,
+                "status_reason": s.status_reason,
+                "narrative": s.narrative,
+                "claims": [{"id": c.id, "text": c.text, "kind": c.kind, "source_ids": c.source_ids} for c in s.claims],
+                "bullets": s.bullets,
+                "tables": [{"title": t.title, "columns": t.columns, "rows": t.rows} for t in s.tables],
+                "questions": s.questions,
+            }
+            for s in violating_sections
+        ],
+        ensure_ascii=False,
+    )
+
+    violations_str = "\n".join([f"- {v}" for v in violations])
+    brief_formatted = _format_brief_for_prompt(requirements, description)
+    sources_formatted = _format_sources_for_prompt(sources)
+
+    repair_prompt = RFP_REPAIR_PROMPT.format(
+        violations=violations_str,
+        brief=brief_formatted,
+        sources=sources_formatted,
+        raw_proposal=violating_json,
+    )
+
+    remaining = _remaining_budget(deadline) if deadline else settings.ollama_timeout_seconds
+    stage_timeout = min(60.0, remaining)
+
+    try:
+        raw_output = generate_text(
+            repair_prompt,
+            settings,
+            max_tokens=1800,
+            output_schema=RFP_SECTION_BATCH_SCHEMA,
+            timeout_seconds=stage_timeout,
+        )
+        parsed = _strict_parse_json(raw_output)
+        repaired_sections = _parse_model_sections_output(parsed, violating_specs, sources)
+        repaired_by_key = {s.key: s for s in repaired_sections}
+
+        # Merge repaired sections back into 19-section proposal
+        merged_sections: list[RfpSection] = []
+        for s in sections:
+            if s.key in repaired_by_key:
+                merged_sections.append(repaired_by_key[s.key])
+            else:
+                merged_sections.append(s)
+
+        # Re-run deterministic validator on the complete proposal
+        post_violations = _validate_proposal_deterministically(merged_sections, requirements, sources)
+        return merged_sections, post_violations
+
+    except Exception as exc:
+        logger.warning("Targeted repair LLM call failed: %s", exc)
+        return sections, violations + [f"Repair call exception: {exc}"]
+
+
+# ============================================================================
+# Step 7: Automated Quality Scoring & Rubric Breakdown
+# ============================================================================
+def _compute_quality_report(
+    sections: list[RfpSection],
+    requirements: RfpRequirements,
+    sources: list[RfpSource],
+    metadata: PipelineMetadata,
+    has_critical_fact_violation: bool = False,
+) -> tuple[RfpQualityReport, list[RfpCoverageItem]]:
+    """Compute automated rubric breakdown and enforce strict quality ceilings."""
+    # 1. Coverage Report (/20)
+    full_text = " ".join([
+        f"{s.title} {' '.join(s.narrative)} {' '.join(c.text for c in s.claims)} {' '.join(s.recommendations)} {' '.join(s.facts_from_brief)}"
+        for s in sections
+    ]).casefold()
+
+    coverage_report: list[RfpCoverageItem] = []
+    covered_count = 0
+    for need in requirements.atomic_needs:
+        n_terms = set(re.findall(r"[a-zà-ÿ]{4,}", _fold_text(need.text)))
+        covered = any(term in full_text for term in n_terms) if n_terms else (need.text.casefold() in full_text)
+        matching_keys = [s.key for s in sections if any(term in " ".join(s.narrative + s.recommendations).casefold() for term in n_terms)]
+        coverage_report.append(RfpCoverageItem(need_id=need.id, covered=covered, section_keys=matching_keys or ["executive_summary"]))
+        if covered:
+            covered_count += 1
+
+    coverage_ratio = covered_count / max(1, len(requirements.atomic_needs))
+    coverage_score = round(coverage_ratio, 2)
+    coverage_detail = round(coverage_ratio * 20.0, 1)
+
+    # 2. Provenance & Factual Accuracy (/25)
+    all_claims = [c for s in sections for c in s.claims]
+    evidence_claims = [c for c in all_claims if c.kind == "internal_evidence"]
+    if sources:
+        citation_integrity = 1.0 if not metadata.warnings else max(0.5, 1.0 - (len(metadata.warnings) * 0.05))
+        provenance_detail = round(min(25.0, 15.0 + (len(evidence_claims) * 2.5)), 1)
+    else:
+        citation_integrity = None
+        provenance_detail = 12.0
+
+    # 3. Specificity (/15)
+    specificity_detail = 12.0 if metadata.generation_mode == "llm" else 8.0
+
+    # 4. Solution & Delivery Quality (/15)
+    solution_detail = 13.0 if len(sections) == 19 else round((len(sections) / 19.0) * 15.0, 1)
+
+    # 5. Risks / Governance / Acceptance (/10)
+    has_risk_table = any(s.key == "risks_assumptions_clarifications" and len(s.tables) > 0 for s in sections)
+    has_gov_table = any(s.key == "team_and_governance" and len(s.tables) > 0 for s in sections)
+    governance_detail = 10.0 if (has_risk_table and has_gov_table) else 7.0
+
+    # 6. Executive Writing automated estimate (/10)
+    writing_detail = 9.0 if metadata.generation_mode == "llm" else 6.0
+
+    # 7. Source Quality (/5)
+    source_quality_detail = min(5.0, len(sources) * 1.5) if sources else 0.0
+
+    # Total Automated Score (/100)
+    raw_score = (
+        coverage_detail
+        + provenance_detail
+        + specificity_detail
+        + solution_detail
+        + governance_detail
+        + writing_detail
+        + source_quality_detail
+    ) / 100.0
+    raw_score = round(min(1.0, max(0.0, raw_score)), 2)
+
+    # Enforce strict quality ceilings per rule 6:
+    effective_score = raw_score
+    if not sources:
+        effective_score = min(effective_score, 0.70)
+    if metadata.generation_mode == "deterministic_fallback":
+        effective_score = min(effective_score, 0.70)
+    elif metadata.generation_mode == "mixed_fallback":
+        effective_score = min(effective_score, 0.85)
+    elif metadata.repair_attempted:
+        effective_score = min(effective_score, 0.90)
+
+    passed = (
+        not has_critical_fact_violation
+        and effective_score >= 0.60
+        and len(sections) == 19
+        and metadata.generation_mode != "repair_failed"
+    )
+
+    quality = RfpQualityReport(
+        passed=passed,
+        score=effective_score,
+        coverage_score=coverage_score,
+        citation_integrity=round(citation_integrity, 2) if citation_integrity is not None else None,
+        section_count=len(sections),
+        generation_mode=metadata.generation_mode,
+        planner_mode=metadata.planner_mode,
+        extraction_mode=metadata.extraction_mode,
+        repair_attempted=metadata.repair_attempted,
+        failed_cluster_keys=metadata.failed_cluster_keys,
+        coverage_detail=coverage_detail,
+        provenance_detail=provenance_detail,
+        specificity_detail=specificity_detail,
+        solution_quality_detail=solution_detail,
+        governance_detail=governance_detail,
+        writing_detail=writing_detail,
+        source_quality_detail=source_quality_detail,
+        warnings=metadata.warnings,
+    )
+
+    return quality, coverage_report
+
+
+# ============================================================================
+# Main RFP Generation Pipeline Entry Point
+# ============================================================================
+def generate_rfp_proposal(request: RfpRequest, settings: Settings) -> RfpResponse:
+    """Execute the full PDF-only, 19-section RFP generation pipeline with 540s deadline."""
+    t_start = time.perf_counter()
+    deadline = time.monotonic() + GLOBAL_REQUEST_DEADLINE_S
+
     warnings: list[str] = []
+    timings: dict[str, float] = {}
 
-    # Check for banned generic placeholder responses
-    for s in sections:
-        if any("une réponse générique" in r.casefold() for r in (s.recommendations + s.narrative)):
-            raise RfpGenerationError("La proposition générée contient du texte générique non adapté au brief.")
+    # 1. Brief Requirements Extraction
+    ext_result = extract_brief_requirements(
+        request.description,
+        request.sector,
+        settings,
+        deadline=deadline,
+    )
+    requirements = ext_result.requirements
+    warnings.extend(ext_result.warnings)
+    timings["brief_extraction_ms"] = ext_result.duration_ms
 
-    # Map sections by key
-    existing_by_key = {s.key: s for s in sections}
-    ordered_sections: list[RfpSection] = []
+    # 2. PDF Evidence Retrieval (Exclusively PDF)
+    t_ret_start = time.perf_counter()
+    citations, sources = retrieve_rfp_pdf_evidence(
+        query=request.description,
+        sector=request.sector or requirements.sector,
+        top_k=request.top_k,
+        settings=settings,
+    )
+    timings["pdf_retrieval_ms"] = round((time.perf_counter() - t_ret_start) * 1000, 1)
 
-    for spec in RFP_19_SECTIONS:
-        key = spec["key"]
-        found = existing_by_key.get(key)
-        if found:
-            found.order = spec["order"]
-            found.title = spec["title"]
-            for claim in found.claims:
-                if claim.kind == "internal_evidence":
-                    invalid_ids = [sid for sid in claim.source_ids if sid not in valid_source_ids]
-                    if invalid_ids:
-                        warnings.append(f"Section {key}: citation inconnue {invalid_ids} corrigée.")
-                        claim.source_ids = [sid for sid in claim.source_ids if sid in valid_source_ids]
-                        if not claim.source_ids:
-                            claim.kind = "recommendation"
-            ordered_sections.append(found)
-        else:
-            ordered_sections.append(_deterministic_section(spec, requirements, sources))
+    if not sources:
+        warnings.append(
+            "Aucune preuve PDF interne pertinente n'a été trouvée dans le corpus documentaire pour étayer ce besoin. "
+            "La proposition repose exclusivement sur les faits du brief, des recommandations méthodologiques et des questions de cadrage."
+        )
 
-    # If the generation returned custom decision blocks (e.g. block-1, block-2),
-    # incorporate their tailored content into the 19 standard sections!
-    custom_blocks = [s for s in sections if s.key not in {spec["key"] for spec in RFP_19_SECTIONS}]
-    if custom_blocks:
-        custom_recs = [r for b in custom_blocks for r in (b.recommendations or b.narrative)]
-        if custom_recs and ordered_sections:
-            ordered_sections[0].recommendations.extend(custom_recs)
-            ordered_sections[0].narrative.extend(custom_recs)
+    # 3. Planner Stage
+    plan_result = _plan_rfp_structure(
+        requirements,
+        sources,
+        settings,
+        request.description,
+        deadline=deadline,
+    )
+    planner_output = plan_result.plan
+    warnings.extend(plan_result.warnings)
+    timings["planner_ms"] = plan_result.duration_ms
 
-    # Ensure globally unique claim IDs across all 19 sections
+    # 4. Multi-Pass 5-Cluster Section Writing
+    t_gen_start = time.perf_counter()
+    cluster_results: list[ClusterGenerationResult] = []
+    generated_sections: list[RfpSection] = []
+    failed_cluster_keys: list[str] = []
+
+    for cluster_order_list in RFP_WRITER_CLUSTERS:
+        cluster_res = _generate_section_cluster(
+            cluster_order_list,
+            planner_output,
+            requirements,
+            sources,
+            settings,
+            request.description,
+            deadline=deadline,
+        )
+        cluster_results.append(cluster_res)
+        generated_sections.extend(cluster_res.sections)
+        if cluster_res.mode == "deterministic_fallback":
+            failed_cluster_keys.extend(cluster_res.cluster_keys)
+        warnings.extend(cluster_res.warnings)
+
+    timings["generation_ms"] = round((time.perf_counter() - t_gen_start) * 1000, 1)
+
+    # Resolve Generation Mode
+    fallback_cluster_count = sum(1 for c in cluster_results if c.mode == "deterministic_fallback")
+    if fallback_cluster_count == 0:
+        generation_mode: Literal["llm", "mixed_fallback", "deterministic_fallback", "repair_failed"] = "llm"
+    elif fallback_cluster_count < len(RFP_WRITER_CLUSTERS):
+        generation_mode = "mixed_fallback"
+    else:
+        generation_mode = "deterministic_fallback"
+
+    # Ensure unique claim IDs across all sections
     global_claim_idx = 1
-    for s in ordered_sections:
+    for s in generated_sections:
         for c in s.claims:
             c.id = f"claim-{global_claim_idx:03d}"
             global_claim_idx += 1
@@ -728,235 +1539,94 @@ def validate_and_repair_proposal(
                     if sid.startswith("doc-") and sid.replace("doc-", "").isdigit()
                 ]
 
-    # Compute coverage report
-    coverage_report: list[RfpCoverageItem] = []
-    full_text = " ".join([
-        f"{s.title} {' '.join(s.narrative)} {' '.join(c.text for c in s.claims)} {' '.join(s.recommendations)} {' '.join(s.facts_from_brief)}"
-        for s in ordered_sections
-    ]).casefold()
-
-    covered_count = 0
-    for need in requirements.atomic_needs:
-        n_terms = set(re.findall(r"[a-zà-ÿ]{4,}", _fold_text(need.text)))
-        covered = any(term in full_text for term in n_terms) if n_terms else (need.text.casefold() in full_text)
-        matching_keys = [s.key for s in ordered_sections if any(term in " ".join(s.narrative + s.recommendations).casefold() for term in n_terms)]
-        coverage_report.append(RfpCoverageItem(need_id=need.id, covered=covered, section_keys=matching_keys or ["executive_summary"]))
-        if covered:
-            covered_count += 1
-
-    coverage_score = covered_count / max(1, len(requirements.atomic_needs))
-    has_sources = len(sources) > 0
-    if not has_sources:
-        warnings.append(
-            "Aucune preuve PDF interne pertinente n'a été trouvée dans le corpus documentaire pour étayer ce besoin. "
-            "La proposition repose exclusivement sur les faits du brief, des recommandations méthodologiques et des questions de cadrage."
-        )
-        citation_integrity = None
-        # Rubric scoring when no internal evidence is present:
-        # - Need Coverage: 40% (max 0.40)
-        # - Section Completeness & Coherence: 30% (max 0.30)
-        # - Internal PDF Evidence: 0% (max 0.00 since no internal PDF exists)
-        # Total global score is honestly capped at 0.70 (70/100)
-        quality_score = round(0.40 * coverage_score + 0.30 * (len(ordered_sections) / 19.0), 2)
-    else:
-        citation_integrity = 1.0 if not warnings else max(0.5, 1.0 - (len(warnings) * 0.1))
-        # Rubric scoring when internal evidence is present:
-        # - Need Coverage: 40% (max 0.40)
-        # - Section Completeness & Coherence: 30% (max 0.30)
-        # - Internal PDF Evidence & Citation Accuracy: 30% (max 0.30)
-        quality_score = round(0.40 * coverage_score + 0.30 * (len(ordered_sections) / 19.0) + 0.30 * citation_integrity, 2)
-
-    quality = RfpQualityReport(
-        passed=quality_score >= 0.6 and len(ordered_sections) == 19,
-        score=quality_score,
-        coverage_score=round(coverage_score, 2),
-        citation_integrity=round(citation_integrity, 2) if citation_integrity is not None else None,
-        section_count=len(ordered_sections),
-        warnings=warnings,
-    )
-
-    return ordered_sections, quality, coverage_report
-
-
-# ============================================================================
-# Main RFP Generation Pipeline Entry Point
-# ============================================================================
-def _parse_model_sections_output(
-    raw_output: str,
-    requirements: RfpRequirements,
-    sources: list[RfpSource],
-) -> list[RfpSection]:
-    parsed = json.loads(raw_output)
-    if not isinstance(parsed, dict) or "sections" not in parsed or not isinstance(parsed["sections"], list):
-        raise ValueError("Invalid proposal JSON structure")
-
-    sections: list[RfpSection] = []
-    for idx, s in enumerate(parsed["sections"], start=1):
-        if not isinstance(s, dict):
-            continue
-        key = s.get("key") or f"section-{idx}"
-        title = s.get("title") or f"Section {idx}"
-        narrative = s.get("narrative") or s.get("content") or []
-        if isinstance(narrative, str):
-            narrative = [narrative]
-
-        claims = [
-            RfpClaim(
-                id=c.get("id") or f"claim-{c_idx:03d}",
-                text=c.get("text", ""),
-                kind=c.get("kind", "recommendation"),
-                source_ids=c.get("source_ids", []),
-            )
-            for c_idx, c in enumerate(s.get("claims", []), start=1)
-            if isinstance(c, dict) and c.get("text")
-        ]
-
-        recommendations = s.get("recommendations") or narrative
-        facts = s.get("facts_from_brief") or [c.text for c in claims if c.kind == "brief_fact"]
-        verified_refs = s.get("verified_references") or [c for c in claims if c.kind == "internal_evidence"]
-        assumptions = s.get("assumptions") or s.get("assumptions_to_confirm") or []
-
-        tables = [
-            RfpTable(
-                title=t.get("title", "Tableau"),
-                columns=t.get("columns", ["Élément", "Description"]),
-                rows=t.get("rows", []),
-            )
-            for t in s.get("tables", [])
-            if isinstance(t, dict) and t.get("columns") and t.get("rows")
-        ]
-
-        sections.append(
-            RfpSection(
-                key=key,
-                order=idx,
-                title=title,
-                status=s.get("status", "complete"),
-                status_reason=s.get("status_reason"),
-                summary=s.get("summary"),
-                narrative=narrative,
-                claims=claims,
-                bullets=s.get("bullets", []),
-                tables=tables,
-                questions=s.get("questions", []),
-                facts_from_brief=facts,
-                verified_references=verified_refs,
-                recommendations=recommendations,
-                assumptions_to_confirm=assumptions,
-            )
-        )
-    return sections
-
-
-def generate_rfp_proposal(request: RfpRequest, settings: Settings) -> RfpResponse:
-    """Execute the full PDF-only, 19-section RFP generation pipeline."""
-    import time
-    t_start = time.perf_counter()
-    llm_calls_count = 0
-    repair_count = 0
-    deterministic_fallback_used = False
-
-    # 1. Brief Requirements Extraction
-    t_ext_start = time.perf_counter()
-    requirements = extract_brief_requirements(request.description, request.sector, settings)
-    t_ext_ms = round((time.perf_counter() - t_ext_start) * 1000, 1)
-
-    # 2. PDF Evidence Retrieval (Exclusively PDF)
-    t_ret_start = time.perf_counter()
-    citations, sources = retrieve_rfp_pdf_evidence(
-        query=request.description,
-        sector=request.sector or requirements.sector,
-        top_k=request.top_k,
-        settings=settings,
-    )
-    t_ret_ms = round((time.perf_counter() - t_ret_start) * 1000, 1)
-
-    # 3. Planner Stage
-    t_plan_start = time.perf_counter()
-    planner_output = _plan_rfp_structure(requirements, sources, settings, request.description)
-    t_plan_ms = round((time.perf_counter() - t_plan_start) * 1000, 1)
-
-    # 4. Model Proposal Generation with Quality Check & Single Retry
-    brief_formatted = _format_brief_for_prompt(requirements, request.description)
-    sources_formatted = _format_sources_for_prompt(sources)
-    prompt = RFP_SECTION_BATCH_PROMPT.format(
-        section_specs="19 sections enterprise Avaliance",
-        brief=brief_formatted,
-        sources=sources_formatted,
-    )
-
-    t_gen_start = time.perf_counter()
-    raw_sections: list[RfpSection] = []
-    try:
-        raw_output = generate_text(prompt, settings, max_tokens=1800, output_schema=RFP_SECTION_BATCH_SCHEMA)
-        llm_calls_count += 1
-        candidate_sections = _parse_model_sections_output(raw_output, requirements, sources)
-        is_covered, missing_needs = _check_proposal_quality(candidate_sections, requirements)
-        if not is_covered:
-            repair_prompt = f"{prompt}\n\nCORRECTION OBLIGATOIRE : Les exigences suivantes doivent obligatoirement être couvertes : {missing_needs}"
-            repair_count += 1
-            retry_output = generate_text(repair_prompt, settings, max_tokens=1800, output_schema=RFP_SECTION_BATCH_SCHEMA)
-            llm_calls_count += 1
-            retry_sections = _parse_model_sections_output(retry_output, requirements, sources)
-            retry_covered, retry_missing = _check_proposal_quality(retry_sections, requirements)
-            if not retry_covered:
-                raise RfpGenerationError(f"Impossible de générer une proposition conforme après une nouvelle tentative. Exigences manquantes : {retry_missing}")
-            raw_sections = retry_sections
-        else:
-            raw_sections = candidate_sections
-    except RfpGenerationError:
-        raise
-    except Exception as exc:
-        logger.info("Model generation unavailable or returned non-JSON, using tailored deterministic composition: %s", exc)
-        deterministic_fallback_used = True
-        raw_sections = [_deterministic_section(spec, requirements, sources) for spec in RFP_19_SECTIONS]
-    t_gen_ms = round((time.perf_counter() - t_gen_start) * 1000, 1)
-
-    # 5. Quality Validation & Formatting into 19 Standard Sections
+    # 5. Deterministic Validation & Targeted Repair
     t_val_start = time.perf_counter()
-    validated_sections, quality, coverage_report = validate_and_repair_proposal(
-        raw_sections, requirements, sources, settings, request.description
+    violations = _validate_proposal_deterministically(generated_sections, requirements, sources)
+    repair_attempted = False
+
+    if violations:
+        logger.info("Deterministic validator found %d violations on initial generation. Initiating targeted repair...", len(violations))
+        repaired_sections, post_violations = _repair_proposal_targeted(
+            generated_sections,
+            violations,
+            requirements,
+            sources,
+            settings,
+            request.description,
+            deadline=deadline,
+        )
+        repair_attempted = True
+        if post_violations:
+            logger.error("Targeted repair failed. Remaining violations: %s", post_violations)
+            raise RfpValidationError(
+                f"La proposition générée ne satisfait pas aux critères de conformité et de provenance après réparation ciblée : {'; '.join(post_violations[:3])}"
+            )
+        generated_sections = repaired_sections
+
+    timings["validation_ms"] = round((time.perf_counter() - t_val_start) * 1000, 1)
+    timings["total_ms"] = round((time.perf_counter() - t_start) * 1000, 1)
+
+    # Build Metadata Object
+    metadata = PipelineMetadata(
+        extraction_mode=ext_result.mode,
+        planner_mode=plan_result.mode,
+        generation_mode=generation_mode,
+        repair_attempted=repair_attempted,
+        failed_cluster_keys=failed_cluster_keys,
+        cluster_results=cluster_results,
+        warnings=warnings,
+        timings=timings,
     )
-    t_val_ms = round((time.perf_counter() - t_val_start) * 1000, 1)
-    total_duration_ms = round((time.perf_counter() - t_start) * 1000, 1)
+
+    # 6. Quality Scoring
+    quality, coverage_report = _compute_quality_report(
+        generated_sections,
+        requirements,
+        sources,
+        metadata,
+        has_critical_fact_violation=False,
+    )
+
+    # Build Safe Public Cluster Metrics (No confidential prompts, excerpts or full prose)
+    cluster_metrics: list[RfpClusterMetric] = [
+        RfpClusterMetric(
+            cluster_keys=c.cluster_keys,
+            mode=c.mode,
+            duration_ms=c.duration_ms,
+            warning_code=c.warning_code,
+        )
+        for c in cluster_results
+    ]
 
     has_evidence = len(sources) > 0
     diagnostic = None if has_evidence else "NO_RELEVANT_PDF_EVIDENCE"
 
     logger.info(
-        "RFP Pipeline Execution: request_id=%s, model=%s, llm_calls=%d, repairs=%d, deterministic_fallback=%s, "
-        "evidence_passed=%s, diagnostic=%s, score=%.2f, timings_ms={brief_extraction: %.1f, pdf_retrieval: %.1f, "
-        "planner: %.1f, generation: %.1f, validation: %.1f, total: %.1f}",
+        "RFP Pipeline Complete: request_id=%s, model=%s, extraction=%s, planner=%s, generation=%s, "
+        "repairs=%d, evidence_passed=%s, score=%.2f, timings_ms=%s",
         request.request_id,
         settings.llm_model,
-        llm_calls_count,
-        repair_count,
-        deterministic_fallback_used,
+        metadata.extraction_mode,
+        metadata.planner_mode,
+        metadata.generation_mode,
+        1 if repair_attempted else 0,
         has_evidence,
-        diagnostic,
         quality.score,
-        t_ext_ms,
-        t_ret_ms,
-        t_plan_ms,
-        t_gen_ms,
-        t_val_ms,
-        total_duration_ms,
+        timings,
     )
-
-    has_evidence = len(sources) > 0
-    diagnostic = None if has_evidence else "NO_RELEVANT_PDF_EVIDENCE"
 
     return RfpResponse(
         request_id=request.request_id,
         requirements=requirements,
         proposal=RfpProposal(
             title=f"Proposition de réponse — {requirements.sector or 'Conseil & Systèmes d’Information'}",
-            executive_summary=validated_sections[0].narrative[0] if validated_sections and validated_sections[0].narrative else None,
-            sections=validated_sections,
+            executive_summary=generated_sections[0].narrative[0] if generated_sections and generated_sections[0].narrative else None,
+            sections=generated_sections,
         ),
         sources=sources,
         citations=citations,
         coverage_report=coverage_report,
+        cluster_metrics=cluster_metrics,
         similar_missions=[],  # Synthetic missions are completely excluded from production RFP
         evidence_validation_passed=has_evidence,
         quality=quality,
@@ -967,6 +1637,28 @@ def generate_rfp_proposal(request: RfpRequest, settings: Settings) -> RfpRespons
 # ============================================================================
 # Backward-Compatibility Helpers for Legacy Test Signatures
 # ============================================================================
+def validate_and_repair_proposal(
+    sections: list[RfpSection],
+    requirements: RfpRequirements,
+    sources: list[RfpSource],
+    settings: Settings,
+    description: str,
+) -> tuple[list[RfpSection], RfpQualityReport, list[RfpCoverageItem]]:
+    """Compatibility wrapper for deterministic validation & quality report."""
+    metadata = PipelineMetadata(
+        extraction_mode="deterministic_fallback",
+        planner_mode="deterministic_fallback",
+        generation_mode="deterministic_fallback",
+        repair_attempted=False,
+        failed_cluster_keys=[],
+        cluster_results=[],
+        warnings=[],
+        timings={},
+    )
+    quality, coverage = _compute_quality_report(sections, requirements, sources, metadata)
+    return sections, quality, coverage
+
+
 def build_adaptive_proposal(requirements: RfpRequirements, citations: list[RfpCitation]) -> list[RfpSection]:
     """Compatibility wrapper generating 19 structured sections."""
     sources = [

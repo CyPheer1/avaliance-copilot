@@ -209,6 +209,8 @@ class RfpAtomicNeed(BaseModel):
     text: str
     category: str = "general"
     source_excerpt: str | None = None
+    start_offset: int | None = None
+    end_offset: int | None = None
 
 
 class RfpRequirements(BaseModel):
@@ -315,12 +317,31 @@ class RfpCoverageItem(BaseModel):
     section_keys: list[str] = Field(default_factory=list)
 
 
+class RfpClusterMetric(BaseModel):
+    cluster_keys: list[str]
+    mode: Literal["llm", "deterministic_fallback"]
+    duration_ms: float
+    warning_code: str | None = None
+
+
 class RfpQualityReport(BaseModel):
     passed: bool = True
     score: float = Field(default=1.0, ge=0.0, le=1.0)
     coverage_score: float = Field(default=1.0, ge=0.0, le=1.0)
     citation_integrity: float | None = None
     section_count: int = 19
+    generation_mode: Literal["llm", "mixed_fallback", "deterministic_fallback", "repair_failed"] | None = None
+    planner_mode: Literal["llm", "deterministic_fallback"] | None = None
+    extraction_mode: Literal["llm", "deterministic_fallback"] | None = None
+    repair_attempted: bool = False
+    failed_cluster_keys: list[str] = Field(default_factory=list)
+    coverage_detail: float | None = None
+    provenance_detail: float | None = None
+    specificity_detail: float | None = None
+    solution_quality_detail: float | None = None
+    governance_detail: float | None = None
+    writing_detail: float | None = None
+    source_quality_detail: float | None = None
     warnings: list[str] = Field(default_factory=list)
 
 
@@ -340,6 +361,7 @@ class RfpResponse(BaseModel):
     sources: list[RfpSource] = Field(default_factory=list)
     citations: list[RfpCitation] = Field(default_factory=list)
     coverage_report: list[RfpCoverageItem] = Field(default_factory=list)
+    cluster_metrics: list[RfpClusterMetric] = Field(default_factory=list)
     similar_missions: list[RfpComparableMission] = Field(default_factory=list)
     evidence_validation_passed: bool
     quality: RfpQualityReport | None = None
