@@ -319,7 +319,7 @@ class RfpQualityReport(BaseModel):
     passed: bool = True
     score: float = Field(default=1.0, ge=0.0, le=1.0)
     coverage_score: float = Field(default=1.0, ge=0.0, le=1.0)
-    citation_integrity: float = Field(default=1.0, ge=0.0, le=1.0)
+    citation_integrity: float | None = None
     section_count: int = 19
     warnings: list[str] = Field(default_factory=list)
 

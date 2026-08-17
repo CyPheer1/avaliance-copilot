@@ -238,7 +238,7 @@ export interface RfpQualityReport {
   passed: boolean
   score: number
   coverageScore: number
-  citationIntegrity: number
+  citationIntegrity?: number | null
   sectionCount: number
   warnings: string[]
 }

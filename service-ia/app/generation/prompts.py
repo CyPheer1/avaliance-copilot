@@ -123,11 +123,63 @@ Règles impératives :
 - `atomic_needs` : Décompose le brief en 3 à 10 besoins/exigences atomiques distincts et vérifiables. Chaque besoin doit avoir un id unique ("need-01", "need-02", etc.) et son extrait source exact.
 - Ne duplique pas la même phrase dans toutes les catégories.
 - Si le secteur est implicite ou explicite, renseigne-le ("santé", "banque", "assurance", "télécom", "transport", "énergie", "secteur public", etc.).
-- N'invente aucun fait, budget ou technologie absents du brief.
-- Retourne uniquement l'objet JSON conforme au schéma, sans préambule ni balise <think>.
-
 Brief client :
 {description}
+
+JSON :"""
+
+RFP_PLANNER_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "plan": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "key": {"type": "string"},
+                    "status": {
+                        "type": "string",
+                        "enum": ["complete", "tailored", "not_applicable", "requires_clarification"],
+                    },
+                    "status_reason": {"type": ["string", "null"]},
+                    "covered_need_ids": {"type": "array", "items": {"type": "string"}},
+                    "planned_topics": {"type": "array", "items": {"type": "string"}},
+                    "allowed_source_ids": {"type": "array", "items": {"type": "string"}},
+                    "tables_planned": {"type": "array", "items": {"type": "string"}},
+                    "questions_planned": {"type": "array", "items": {"type": "string"}},
+                },
+                "required": ["key", "status", "covered_need_ids", "planned_topics"],
+                "additionalProperties": False,
+            },
+        },
+    },
+    "required": ["plan"],
+    "additionalProperties": False,
+}
+
+RFP_PLANNER_PROMPT = """Tu es le directeur de mission senior d'Avaliance en charge du cadrage avant-vente.
+Établis le plan d'architecture des 19 sections de la proposition pour répondre au brief client suivant :
+
+BRIEF CLIENT :
+{brief}
+
+BESOINS ATOMIQUES :
+{atomic_needs}
+
+SOURCES INTERNES DISPONIBLES :
+{sources}
+
+SPÉCIFICATION DES 19 SECTIONS :
+{section_specs}
+
+Règles pour le plan :
+1. Pour chacune des 19 sections dans l'ordre exact, détermine le statut ("complete", "tailored", "not_applicable", "requires_clarification").
+2. Si une section n'est pas applicable au brief, donne impérativement un `status_reason` précis et justifié.
+3. Associe chaque besoin atomique aux sections pertinentes dans `covered_need_ids`.
+4. Spécifie les axes de contenu dans `planned_topics` (mots-clés / thèmes, PAS de prose rédigée).
+5. Indique les sources autorisées dans `allowed_source_ids` (ex. ["brief", "doc-01"]).
+6. Ne rédige aucun paragraphe final de prose à cette étape.
+7. Retourne uniquement l'objet JSON conforme au schéma.
 
 JSON :"""
 

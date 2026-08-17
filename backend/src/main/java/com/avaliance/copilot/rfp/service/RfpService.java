@@ -59,7 +59,8 @@ public class RfpService {
             throw e;
         } finally {
             long duration = System.currentTimeMillis() - startTime;
-            auditService.log(AuditAction.GENERATE_RFP, request.getDescription(), status, duration);
+            String safeAuditQuery = "sector=" + request.getSector() + ", length=" + (request.getDescription() != null ? request.getDescription().length() : 0);
+            auditService.log(AuditAction.GENERATE_RFP, safeAuditQuery, status, duration);
         }
     }
 }

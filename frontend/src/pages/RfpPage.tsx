@@ -71,15 +71,16 @@ export function RfpPage() {
                 <div>
                   <span className="eyebrow">Proposition Enterprise Avaliance</span>
                   <h2>{generation.data.proposal.title}</h2>
-                  {generation.data.quality && (
-                    <div className="rfp-quality-meta" style={{ display: 'flex', gap: '0.75rem', marginTop: '0.25rem', fontSize: '0.8125rem', color: '#64748b' }}>
-                      <span><strong>Sections :</strong> {generation.data.proposal.sections.length}/19</span>
-                      <span><strong>Indice de conformité :</strong> {Math.round(generation.data.quality.score * 100)}%</span>
-                      {generation.data.sources && generation.data.sources.length > 0 && (
-                        <span><strong>Preuves PDF :</strong> {generation.data.sources.length} document(s)</span>
-                      )}
-                    </div>
-                  )}
+                  <div className="rfp-quality-meta" style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem', marginTop: '0.25rem', fontSize: '0.8125rem', color: '#64748b' }}>
+                    <span><strong>Sections :</strong> {generation.data.proposal?.sections ? `${generation.data.proposal.sections.length}/19` : 'Non calculé'}</span>
+                    <span><strong>Indice de conformité :</strong> {generation.data.quality?.score != null ? `${Math.round(generation.data.quality.score * 100)}%` : 'Non calculé'}</span>
+                    {generation.data.sources && generation.data.sources.length > 0 && (
+                      <span><strong>Preuves PDF :</strong> {generation.data.sources.length} document(s)</span>
+                    )}
+                    {generation.data.quality?.warnings && generation.data.quality.warnings.length > 0 && (
+                      <span style={{ color: '#eab308' }}><strong>Avertissements :</strong> {generation.data.quality.warnings.length}</span>
+                    )}
+                  </div>
                 </div>
               </div>
               <div className="document-actions">

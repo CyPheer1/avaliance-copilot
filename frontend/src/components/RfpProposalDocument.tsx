@@ -71,22 +71,46 @@ function StructuredSection({ section }: { section: RfpSection }) {
             </div>
           )}
 
-          {section.bullets && section.bullets.length > 0 && (
-            <ul className="rfp-bullets-list">
-              {section.bullets.map((bullet, idx) => (
-                <li key={idx}>{bullet}</li>
-              ))}
-            </ul>
+          {section.claims && section.claims.length > 0 && (
+            <div className="rfp-claims-stream">
+              {section.claims.some((c) => c.kind === 'brief_fact') && (
+                <div className="rfp-claim-group rfp-claim-group--brief">
+                  <strong>Faits issus du brief client</strong>
+                  <ul>
+                    {section.claims.filter((c) => c.kind === 'brief_fact').map((c, idx) => (
+                      <li key={c.id || idx}>{c.text}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              {section.claims.some((c) => c.kind === 'internal_evidence') && (
+                <div className="rfp-claim-group rfp-claim-group--evidence">
+                  <strong>Références internes vérifiées</strong>
+                  <ul>
+                    {section.claims.filter((c) => c.kind === 'internal_evidence').map((c, idx) => (
+                      <li key={c.id || idx}>
+                        {c.text}{' '}
+                        {c.citationIndexes && c.citationIndexes.map((ci) => (
+                          <span className="citation-chip" key={ci} title={`Source PDF [${ci}]`}>
+                            [{ci}]
+                          </span>
+                        ))}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
           )}
 
-          {section.verifiedReferences.length > 0 && (
+          {(!section.claims || section.claims.length === 0) && section.verifiedReferences.length > 0 && (
             <div className="rfp-statement--evidence">
               <strong>Référence interne vérifiée</strong>
               <ul>
                 {section.verifiedReferences.map((item, idx) => (
                   <li key={idx}>
                     {item.text}{' '}
-                    {item.citationIndexes.map((citationIndex) => (
+                    {item.citationIndexes && item.citationIndexes.map((citationIndex) => (
                       <span className="citation-chip" key={citationIndex}>
                         [{citationIndex}]
                       </span>
@@ -97,7 +121,15 @@ function StructuredSection({ section }: { section: RfpSection }) {
             </div>
           )}
 
-          {section.tables.map((table, tIdx) => (
+          {section.bullets && section.bullets.length > 0 && (
+            <ul className="rfp-bullets-list">
+              {section.bullets.map((bullet, idx) => (
+                <li key={idx}>{bullet}</li>
+              ))}
+            </ul>
+          )}
+
+          {section.tables && section.tables.map((table, tIdx) => (
             <div className="rfp-table-wrap" key={tIdx}>
               <h4>{table.title}</h4>
               <table>
@@ -121,7 +153,7 @@ function StructuredSection({ section }: { section: RfpSection }) {
             </div>
           ))}
 
-          {section.assumptionsToConfirm.length > 0 && (
+          {section.assumptionsToConfirm && section.assumptionsToConfirm.length > 0 && (
             <div className="rfp-clarifications">
               <h4>Points à clarifier & Hypothèses</h4>
               <ul>

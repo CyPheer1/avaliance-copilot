@@ -509,13 +509,13 @@ def _metadata_filters(request: RetrieveRequest) -> tuple[list[str], list[object]
         conditions.append("dc.corpus_scope = %s")
         params.append(request.corpus_scope)
 
-    if request.sector:
+    if request.sector and request.corpus_scope != "PDF":
         conditions.append("dc.sector = %s")
         params.append(request.sector)
-    if request.mission_type:
+    if request.mission_type and request.corpus_scope != "PDF":
         conditions.append("dc.mission_type = %s")
         params.append(request.mission_type)
-    if request.year:
+    if request.year and request.corpus_scope != "PDF":
         conditions.append("dc.year = %s")
         params.append(request.year)
 

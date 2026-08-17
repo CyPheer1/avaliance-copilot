@@ -3,7 +3,7 @@ import type { ApiErrorBody, AuthSession, DashboardSummary, Mission, MissionPage,
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? '/api'
 const SESSION_KEY = 'avaliance-copilot-session'
 const AUTH_REQUEST_TIMEOUT_MS = 15_000
-const RFP_REQUEST_TIMEOUT_MS = 180_000
+const RFP_REQUEST_TIMEOUT_MS = 600_000
 
 export class ApiError extends Error {
   readonly status: number

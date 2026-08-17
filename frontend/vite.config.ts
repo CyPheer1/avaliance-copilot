@@ -11,6 +11,8 @@ export default defineConfig({
       '/api': {
         // Use IPv4 explicitly: the backend is published on the local IPv4 interface.
         target: 'http://127.0.0.1:8080',
+        timeout: 600000,
+        proxyTimeout: 600000,
         configure: (proxy) => {
           proxy.on('proxyReq', (proxyReq, request) => {
             console.info(`[vite proxy] ${request.method} ${request.url} -> ${proxyReq.protocol}//${proxyReq.host}${proxyReq.path}`)
