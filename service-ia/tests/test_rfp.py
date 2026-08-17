@@ -36,7 +36,8 @@ def test_rfp_builds_adaptive_sections_and_structured_tables():
 def test_rfp_returns_safe_diagnostic_without_pdf_evidence():
     request = RfpRequest(description="Besoin inconnu hors corpus.")
     retrieval = RetrieveResponse(query=request.description, chunks=[], total_found=0)
-    with patch("app.retrieval.vector_search.vector_search", return_value=retrieval):
+    with patch("app.retrieval.vector_search.vector_search", return_value=retrieval), \
+         patch("app.generation.rfp_proposal.generate_text", side_effect=Exception("Deterministic fallback")):
         response = generate_rfp_structure(request, _settings())
 
     assert response.evidence_validation_passed is False

@@ -4,12 +4,94 @@ const username = process.env.E2E_USERNAME ?? process.env.ADMIN_USERNAME ?? 'admi
 const password = process.env.E2E_PASSWORD ?? process.env.ADMIN_PASSWORD ?? 'admin'
 const brief = 'Groupe hospitalier : déployer un portail patient sécurisé HDS, interopérable avec le Dossier Patient Informatisé (DPI) via des API REST et FHIR, et intégrant l\'authentification ProSanté Connect.'
 
-test('RFP proposal renders all 19 sections, claim badges, citations, and actions', async ({ page, context }) => {
+const canonical19Keys = [
+  'executive_summary',
+  'context_understanding',
+  'stakes_and_problem',
+  'objectives_and_outcomes',
+  'scope_inclusions',
+  'scope_exclusions',
+  'functional_solution',
+  'technical_architecture',
+  'integrations_and_interfaces',
+  'security_compliance_governance',
+  'methodology_phases_deliverables',
+  'planning_and_milestones',
+  'team_and_governance',
+  'testing_and_acceptance',
+  'migration_deployment_reversibility',
+  'change_management_training',
+  'operations_and_support',
+  'risks_assumptions_clarifications',
+  'references_differentiation_next_steps',
+]
+
+const canonical19Titles: Record<string, string> = {
+  executive_summary: 'Synthèse exécutive',
+  context_understanding: 'Compréhension du contexte',
+  stakes_and_problem: 'Enjeux et problème à résoudre',
+  objectives_and_outcomes: 'Objectifs et résultats attendus',
+  scope_inclusions: 'Périmètre inclus',
+  scope_exclusions: 'Périmètre exclu',
+  functional_solution: 'Solution fonctionnelle proposée',
+  technical_architecture: 'Architecture technique cible',
+  integrations_and_interfaces: 'Intégrations et interfaces',
+  security_compliance_governance: 'Sécurité, conformité et gouvernance des données',
+  methodology_phases_deliverables: 'Démarche, phases et livrables',
+  planning_and_milestones: 'Planning et jalons',
+  team_and_governance: 'Équipe, rôles et gouvernance',
+  testing_and_acceptance: 'Stratégie de tests et recette',
+  migration_deployment_reversibility: 'Migration, déploiement et réversibilité',
+  change_management_training: 'Conduite du changement, formation et transfert',
+  operations_and_support: 'Exploitation, support et maintenance',
+  risks_assumptions_clarifications: 'Risques, dépendances, hypothèses et points à clarifier',
+  references_differentiation_next_steps: 'Références, différenciation Avaliance et prochaines étapes',
+}
+
+const mock19Sections = canonical19Keys.map((key, idx) => ({
+  key,
+  order: idx + 1,
+  title: canonical19Titles[key],
+  status: 'complete',
+  narrative: [`Section ${idx + 1} narrative text for ${canonical19Titles[key]}.`],
+  claims: [
+    { id: `claim-${idx + 1}-1`, text: `Fait extrait du brief pour ${key}`, kind: 'brief_fact', sourceIds: ['brief'], citationIndexes: [] },
+    { id: `claim-${idx + 1}-2`, text: `Recommandation méthodologique pour ${key}`, kind: 'recommendation', sourceIds: [], citationIndexes: [] },
+    ...(key === 'references_differentiation_next_steps'
+      ? [{
+        id: 'claim-019-ref',
+        text: 'Retour d\'expérience Santélia Santé (Page 1) : Déploiement d\'un portail patient sécurisé.',
+        kind: 'internal_evidence',
+        sourceIds: ['doc-01'],
+        citationIndexes: [1],
+      }]
+      : []),
+  ],
+  bullets: key === 'scope_inclusions' ? ['Chantier 1 : Portail HDS', 'Chantier 2 : Connecteurs FHIR'] : [],
+  tables: key === 'planning_and_milestones'
+    ? [{ title: 'Jalons directeurs', columns: ['Jalon', 'Délai'], rows: [['Cadrage', 'T0 + 2 sem']] }]
+    : [],
+  questions: key === 'risks_assumptions_clarifications' ? ['Confirmer le calendrier des comités.'] : [],
+  factsFromBrief: [`Fait extrait du brief pour ${key}`],
+  verifiedReferences: key === 'references_differentiation_next_steps'
+    ? [{
+      id: 'claim-019-ref',
+      text: 'Retour d\'expérience Santélia Santé (Page 1) : Déploiement d\'un portail patient sécurisé.',
+      kind: 'internal_evidence',
+      sourceIds: ['doc-01'],
+      citationIndexes: [1],
+    }]
+    : [],
+  recommendations: [`Recommandation méthodologique pour ${key}`],
+  assumptionsToConfirm: [],
+}))
+
+test('[MOCKED-API] RFP proposal renders all 19 sections, claim badges, citations, and actions', async ({ page, context }) => {
   await context.grantPermissions(['clipboard-read', 'clipboard-write'])
   const pageErrors: Error[] = []
   page.on('pageerror', (error) => pageErrors.push(error))
 
-  // 1. Mock authentic P0 RFP API response
+  // 1. Mock authentic P0 RFP API response with all 19 canonical sections
   await page.route('**/api/rfp/generate', async (route) => {
     await route.fulfill({
       status: 200,
@@ -20,63 +102,7 @@ test('RFP proposal renders all 19 sections, claim badges, citations, and actions
         proposal: {
           title: 'Proposition de réponse — Santé',
           executiveSummary: 'Accompagnement Avaliance pour le déploiement du portail patient sécurisé HDS.',
-          sections: [
-            {
-              key: 'executive_summary',
-              order: 1,
-              title: 'Synthèse exécutive',
-              status: 'complete',
-              narrative: ['Accompagnement Avaliance pour le déploiement du portail patient sécurisé HDS.'],
-              claims: [
-                { id: 'claim-001', text: 'Déployer un portail patient sécurisé HDS', kind: 'brief_fact', sourceIds: ['brief'], citationIndexes: [] },
-                { id: 'claim-002', text: 'Engager un cadrage initial.', kind: 'recommendation', sourceIds: [], citationIndexes: [] },
-              ],
-              bullets: [],
-              tables: [],
-              questions: [],
-              factsFromBrief: ['Déployer un portail patient sécurisé HDS'],
-              verifiedReferences: [],
-              recommendations: ['Engager un cadrage initial.'],
-              assumptionsToConfirm: [],
-            },
-            {
-              key: 'references_differentiation_next_steps',
-              order: 19,
-              title: 'Références, différenciation Avaliance et prochaines étapes',
-              status: 'complete',
-              narrative: ['Preuves documentaires internes issues du retour d\'expérience Santélia.'],
-              claims: [
-                {
-                  id: 'claim-019',
-                  text: 'Retour d\'expérience Santélia Santé (Page 1) : Déploiement d\'un portail patient sécurisé.',
-                  kind: 'internal_evidence',
-                  sourceIds: ['doc-01'],
-                  citationIndexes: [1],
-                },
-              ],
-              bullets: ['Action 1 : Cadrage initial'],
-              tables: [
-                {
-                  title: 'Prochaines étapes',
-                  columns: ['Action', 'Délai', 'Responsable'],
-                  rows: [['Cadrage', 'T0 + 1 sem', 'Directeur de mission']],
-                },
-              ],
-              questions: [],
-              factsFromBrief: [],
-              verifiedReferences: [
-                {
-                  id: 'claim-019',
-                  text: 'Retour d\'expérience Santélia Santé (Page 1) : Déploiement d\'un portail patient sécurisé.',
-                  kind: 'internal_evidence',
-                  sourceIds: ['doc-01'],
-                  citationIndexes: [1],
-                },
-              ],
-              recommendations: [],
-              assumptionsToConfirm: [],
-            },
-          ],
+          sections: mock19Sections,
         },
         sources: [
           {
@@ -129,14 +155,14 @@ test('RFP proposal renders all 19 sections, claim badges, citations, and actions
 
   // 4. Verify rendered components
   await expect(page.getByRole('heading', { name: 'Proposition de réponse — Santé' })).toBeVisible()
-  await expect(page.getByText('Sections : 2/19')).toBeVisible()
+  await expect(page.getByText('Sections : 19/19')).toBeVisible()
   await expect(page.getByText('Indice de conformité : 100%')).toBeVisible()
   await expect(page.getByText('Preuves PDF : 1 document(s)')).toBeVisible()
 
   // Verify Claim Badges
-  await expect(page.getByText('Faits issus du brief client')).toBeVisible()
-  await expect(page.getByText('Références internes vérifiées')).toBeVisible()
-  await expect(page.getByText('Recommandations').first()).toBeVisible()
+  await expect(page.getByText('Faits issus du brief client').first()).toBeVisible()
+  await expect(page.getByText('Références internes vérifiées').first()).toBeVisible()
+  await expect(page.getByText('Recommandations méthodologiques & techniques').first()).toBeVisible()
 
   // Verify Citation Chip
   await expect(page.locator('.citation-chip').first()).toBeVisible()
@@ -152,7 +178,7 @@ test('RFP proposal renders all 19 sections, claim badges, citations, and actions
   expect(pageErrors).toEqual([])
 })
 
-test('RFP proposal renders honest fallback and warning when no evidence is found', async ({ page }) => {
+test('[MOCKED-API] RFP proposal renders honest fallback and warning when no evidence is found', async ({ page }) => {
   const pageErrors: Error[] = []
   page.on('pageerror', (error) => pageErrors.push(error))
 
@@ -166,26 +192,7 @@ test('RFP proposal renders honest fallback and warning when no evidence is found
         requirements: { sector: 'spatial' },
         proposal: {
           title: 'Proposition de réponse — Spatial',
-          sections: [
-            {
-              key: 'executive_summary',
-              order: 1,
-              title: 'Synthèse exécutive',
-              status: 'complete',
-              narrative: ['Proposition consultative pour constellation quantique.'],
-              claims: [
-                { id: 'claim-001', text: 'Constellation de nanosatellites LEO', kind: 'brief_fact', sourceIds: ['brief'], citationIndexes: [] },
-                { id: 'claim-002', text: 'Définir un protocole QKD.', kind: 'recommendation', sourceIds: [], citationIndexes: [] },
-              ],
-              bullets: [],
-              tables: [],
-              questions: [],
-              factsFromBrief: ['Constellation de nanosatellites LEO'],
-              verifiedReferences: [],
-              recommendations: ['Définir un protocole QKD.'],
-              assumptionsToConfirm: [],
-            },
-          ],
+          sections: mock19Sections,
         },
         sources: [],
         citations: [],
@@ -198,7 +205,7 @@ test('RFP proposal renders honest fallback and warning when no evidence is found
           coverageScore: 1.0,
           citationIntegrity: null,
           sectionCount: 19,
-          warnings: ['Aucune preuve PDF interne pertinente'],
+          warnings: ['Aucune preuve PDF interne pertinente n’a été trouvée dans le corpus documentaire.'],
         },
       }),
     })
@@ -220,6 +227,33 @@ test('RFP proposal renders honest fallback and warning when no evidence is found
   await expect(page.locator('.rfp-no-evidence')).toContainText('Aucune preuve PDF suffisamment pertinente n’a été retenue dans la base interne')
   await expect(page.getByText('Indice de conformité : 70%')).toBeVisible()
   await expect(page.getByText('Avertissements : 1')).toBeVisible()
+
+  expect(pageErrors).toEqual([])
+})
+
+test('[REAL-STACK] Live end-to-end RFP generation against backend without mocking', async ({ page }) => {
+  test.skip(process.env.E2E_REAL_STACK !== 'true', 'Skipping live real-stack test (E2E_REAL_STACK not set)')
+  test.setTimeout(450_000)
+
+  const pageErrors: Error[] = []
+  page.on('pageerror', (error) => pageErrors.push(error))
+
+  // 1. Login
+  await page.goto('/login')
+  await page.getByLabel('Identifiant').fill(username)
+  await page.locator('input[type="password"]').fill(password)
+  await page.getByRole('button', { name: 'Se connecter' }).click()
+  await expect(page).toHaveURL(/\/tableau-de-bord$/)
+
+  // 2. Navigate to /propositions and run live generation
+  await page.goto('/propositions')
+  await page.getByLabel('Brief client ou cahier des charges').fill(brief)
+  await page.getByRole('button', { name: 'Générer la proposition' }).click()
+
+  // 3. Wait for real generation to complete (up to 420s)
+  await expect(page.locator('.rfp-document')).toBeVisible({ timeout: 420_000 })
+  await expect(page.getByText(/Sections : 19\/19/)).toBeVisible()
+  await expect(page.getByText(/Indice de conformité :/)).toBeVisible()
 
   expect(pageErrors).toEqual([])
 })

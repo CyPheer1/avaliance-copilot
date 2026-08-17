@@ -51,6 +51,7 @@ def test_rfp_never_queries_synthetic_missions_and_returns_19_sections():
     )
 
     with patch("app.retrieval.vector_search.vector_search", return_value=mock_retrieve) as mock_vector_search, \
+         patch("app.generation.rfp_proposal.generate_text", side_effect=Exception("Deterministic fallback")), \
          patch("app.similar_missions.search.find_similar_missions") as mock_find_similar:
 
         response = generate_rfp_structure(request, _settings())
