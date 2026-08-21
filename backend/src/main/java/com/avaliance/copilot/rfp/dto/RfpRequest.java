@@ -16,6 +16,9 @@ public class RfpRequest {
     @NotBlank(message = "Description is required")
     private String description;
 
+    /** Generation mode: brief, standard, or full */
+    private String mode = "standard";
+
     /** Optional sector filter for finding similar missions */
     private String sector;
 

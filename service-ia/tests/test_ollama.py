@@ -1,6 +1,9 @@
+import asyncio
 from unittest.mock import MagicMock, patch
 
-from app.generation.ollama import _visible_tokens, generate_text, generate_text_stream
+import httpx
+
+from app.generation.ollama import _visible_tokens, generate_text, generate_text_async, generate_text_stream, warm_up_configured_model
 from app.settings import Settings
 
 
@@ -46,6 +49,19 @@ def test_generate_text_keeps_free_text_requests_unconstrained():
     assert "format" not in payload
     assert payload["model"] == "qwen3:8b"
     assert payload["think"] is False
+
+
+def test_warm_up_configured_model_keeps_model_loaded():
+    client = _client("prêt")
+
+    with patch("app.generation.ollama.is_configured_model_available", return_value=True), \
+         patch("app.generation.ollama.httpx.Client", return_value=client):
+        warm_up_configured_model(_settings())
+
+    payload = client.post.call_args.kwargs["json"]
+    assert payload["model"] == "qwen3:8b"
+    assert payload["keep_alive"] == _settings().ollama_keep_alive
+    assert payload["options"]["num_predict"] == 2
 
 
 def test_visible_tokens_excludes_split_thinking_block():

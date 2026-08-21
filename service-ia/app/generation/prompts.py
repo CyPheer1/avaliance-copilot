@@ -72,24 +72,10 @@ Extraits :
 
 JSON :"""
 
-RFP_BRIEF_SCHEMA = {
+RFP_CALL_A_SCHEMA = {
     "type": "object",
     "properties": {
         "sector": {"type": ["string", "null"]},
-        "organization_type": {"type": ["string", "null"]},
-        "business_problem": {"type": "array", "items": {"type": "string"}},
-        "project_type": {"type": "array", "items": {"type": "string"}},
-        "technologies_and_constraints": {"type": "array", "items": {"type": "string"}},
-        "security_and_compliance": {"type": "array", "items": {"type": "string"}},
-        "expected_deliverables": {"type": "array", "items": {"type": "string"}},
-        "scale": {"type": "array", "items": {"type": "string"}},
-        "timeline_and_urgency": {"type": "array", "items": {"type": "string"}},
-        "budget": {"type": ["string", "null"]},
-        "criteria": {"type": "array", "items": {"type": "string"}},
-        "dependencies": {"type": "array", "items": {"type": "string"}},
-        "exclusions": {"type": "array", "items": {"type": "string"}},
-        "assumptions": {"type": "array", "items": {"type": "string"}},
-        "ambiguities_and_questions": {"type": "array", "items": {"type": "string"}},
         "atomic_needs": {
             "type": "array",
             "items": {
@@ -98,31 +84,27 @@ RFP_BRIEF_SCHEMA = {
                     "id": {"type": "string"},
                     "text": {"type": "string"},
                     "category": {"type": "string"},
-                    "source_excerpt": {"type": ["string", "null"]},
+                    "priority": {"type": "string", "enum": ["MUST", "SHOULD", "NICE_TO_HAVE"]},
+                    "brief_anchor": {"type": ["string", "null"]},
                 },
-                "required": ["id", "text", "category"],
+                "required": ["id", "text", "category", "priority", "brief_anchor"],
                 "additionalProperties": False,
             },
         },
     },
-    "required": [
-        "business_problem",
-        "project_type",
-        "technologies_and_constraints",
-        "security_and_compliance",
-        "expected_deliverables",
-        "atomic_needs",
-    ],
+    "required": ["atomic_needs"],
     "additionalProperties": False,
 }
 
-RFP_BRIEF_EXTRACTION_PROMPT = """Tu es l'analyste avant-vente senior d'Avaliance.
+RFP_CALL_A_PROMPT = """Tu es l'analyste avant-vente senior d'Avaliance.
 Analyse le brief client ci-dessous et extrait exhaustivement ses composants structurés en JSON strict.
 
 Règles impératives :
-- `atomic_needs` : Décompose le brief en 3 à 10 besoins/exigences atomiques distincts et vérifiables. Chaque besoin doit avoir un id unique ("need-01", "need-02", etc.) et son extrait source exact.
-- Ne duplique pas la même phrase dans toutes les catégories.
-- Si le secteur est implicite ou explicite, renseigne-le ("santé", "banque", "assurance", "télécom", "transport", "énergie", "secteur public", etc.).
+- `atomic_needs` : Décompose le brief en besoins/exigences atomiques distincts.
+- `priority` : Assigne MUST (bloquant), SHOULD (important), NICE_TO_HAVE (optionnel).
+- `brief_anchor` : Copie-colle l'extrait exact du brief qui justifie ce besoin.
+- Si le secteur est implicite ou explicite, renseigne-le.
+
 Brief client :
 {description}
 
@@ -183,7 +165,7 @@ Règles pour le plan :
 
 JSON :"""
 
-RFP_SECTION_BATCH_SCHEMA = {
+RFP_STANDARD_SECTION_BATCH_SCHEMA = {
     "type": "object",
     "properties": {
         "sections": {
@@ -192,50 +174,48 @@ RFP_SECTION_BATCH_SCHEMA = {
                 "type": "object",
                 "properties": {
                     "key": {"type": "string"},
+                    "title": {"type": "string"},
                     "status": {
                         "type": "string",
                         "enum": ["complete", "tailored", "not_applicable", "requires_clarification"],
                     },
                     "status_reason": {"type": ["string", "null"]},
-                    "summary": {"type": ["string", "null"]},
-                    "narrative": {"type": "array", "items": {"type": "string"}},
-                    "claims": {
+                    "body": {"type": "string"},
+                    "bullets": {
                         "type": "array",
                         "items": {
                             "type": "object",
                             "properties": {
-                                "id": {"type": "string"},
                                 "text": {"type": "string"},
-                                "kind": {
-                                    "type": "string",
-                                    "enum": ["brief_fact", "internal_evidence", "web_evidence", "recommendation", "assumption", "question"],
-                                },
-                                "source_ids": {"type": "array", "items": {"type": "string"}},
+                                "anchor": {
+                                    "type": "object",
+                                    "properties": {
+                                        "type": {
+                                            "type": "string",
+                                            "enum": ["fact", "requirement", "assumption", "recommendation"]
+                                        },
+                                        "id": {"type": ["string", "null"]}
+                                    },
+                                    "required": ["type"]
+                                }
                             },
-                            "required": ["id", "text", "kind", "source_ids"],
+                            "required": ["text", "anchor"],
                             "additionalProperties": False,
-                        },
+                        }
                     },
-                    "bullets": {"type": "array", "items": {"type": "string"}},
-                    "tables": {
+                    "assumptions": {"type": "array", "items": {"type": "string"}},
+                    "questions": {"type": "array", "items": {"type": "string"}},
+                    "evidence": {
                         "type": "array",
                         "items": {
                             "type": "object",
-                            "properties": {
-                                "title": {"type": "string"},
-                                "columns": {"type": "array", "items": {"type": "string"}},
-                                "rows": {
-                                    "type": "array",
-                                    "items": {"type": "array", "items": {"type": "string"}},
-                                },
-                            },
-                            "required": ["title", "columns", "rows"],
+                            "properties": {"id": {"type": "string"}},
+                            "required": ["id"],
                             "additionalProperties": False,
                         },
                     },
-                    "questions": {"type": "array", "items": {"type": "string"}},
                 },
-                "required": ["key", "status", "narrative", "claims"],
+                "required": ["key", "title", "status", "body", "bullets", "assumptions", "questions", "evidence"],
                 "additionalProperties": False,
             },
         },
@@ -244,29 +224,37 @@ RFP_SECTION_BATCH_SCHEMA = {
     "additionalProperties": False,
 }
 
-RFP_SECTION_BATCH_PROMPT = """Tu es directeur de mission avant-vente chez Avaliance.
-Tu rédiges les sections suivantes d'une proposition commerciale de haut niveau pour le comité de direction client :
+RFP_STANDARD_BATCH_PROMPT = """Tu es directeur de mission avant-vente chez Avaliance.
+Tu rédiges les sections suivantes d'une proposition commerciale de haut niveau :
 {section_specs}
 
-BRIEF CLIENT :
+BRIEF CLIENT ORIGINAL — SOURCE AUTORITAIRE :
+{original_brief}
+
+BESOINS ATOMIQUES ANCRÉS VERBATIM DANS LE BRIEF :
 {brief}
 
-SOURCES INTERNES DISPONIBLES (PDFs indexés) :
-{sources}
+PREUVES DOCUMENTAIRES SÉLECTIONNÉES :
+{evidence}
 
 RÈGLES DE RÉDACTION STRICTES :
-1. Rédige en français professionnel, percutant, précis et directement applicable au besoin du client.
-2. Pour chaque section demandée, produis du contenu sur mesure dans `narrative` (paragraphes complets), `claims` (affirmations typées), `bullets` (listes d'actions/décisions) et optionnellement `tables` (tableaux structurés pertinents).
-3. Type chaque claim dans `claims` :
-   - `brief_fact` : fait direct du brief (source_ids: ["brief"]).
-   - `internal_evidence` : fait prouvé par un extrait de source interne disponible ci-dessus (source_ids: [id de source exact comme "doc-01"]). N'invente JAMAIS d'id de source.
-   - `recommendation` : recommandation / préconisation méthodologique ou technique d'Avaliance (source_ids: []).
-   - `assumption` : hypothèse structurante à confirmer (source_ids: []).
-   - `question` : question de cadrage ou point à clarifier (source_ids: []).
-4. Si une section n'est pas applicable au brief (ex. migration s'il n'y a pas de migration), marque son status en "not_applicable" avec un `status_reason` court et justifié.
-5. N'INVENTE AUCUN chiffre ou engagement non sourcé : aucun pourcentage de disponibilité/SLA (ex. 99.9%, 99.8%), aucune plage horaire de support garanti (ex. 24h/24, 7j/7, 24/7), aucun budget, aucune date calendaire fixe, aucun effectif en ETP ou durée contractuelle sans qualification. Décris le dispositif organisationnel sans inventer d'horaires ou de chiffres stricts, ou qualifie-les explicitement de "cible indicative à confirmer lors du cadrage".
-6. Ne cite aucune référence synthétique ni mission imaginaire. N'utilise que les sources internes PDF listées ci-dessus.
-7. Retourne uniquement l'objet JSON valide, sans balise <think>.
+1. Produis du contenu percutant. Limite ta verbosité aux budgets de mots imposés. Pour le format standard, conserve les six sections demandées, dans leur ordre numéroté de 1 à 6, sans répétition.
+2. Le brief client est la source autoritaire de ses faits. Reproduis à l'identique tout nombre, pourcentage, unité, date, durée, seuil ou SLA qui en est issu. N'en déduis, n'en arrondis et n'en remplace aucune valeur.
+3. Distingue explicitement les faits du brief, les preuves PDF, les hypothèses et les recommandations. Une hypothèse ou recommandation ne doit jamais être présentée comme un fait du brief ou du PDF.
+4. `body` : Rédige des paragraphes complets. Chaque affirmation factuelle issue d'un PDF porte le marqueur de sa preuve canonique, par exemple [pdf-001], à la fin de la phrase. Utilise uniquement les identifiants fournis.
+5. `evidence` : sélectionne exactement les mêmes identifiants canoniques `pdf-XXX` que ceux employés dans les marqueurs du texte. Ne fournis jamais de métadonnées documentaires inventées.
+6. `bullets` : Formule des actions, livrables ou engagements. Chaque puce doit avoir une `anchor` pointant vers un besoin (ex: "req-01") ou un fait.
+7. Aucun boilerplate : N'utilise pas "il est crucial", "leader sur son marché", "véritable partenaire". Évite toute répétition.
+8. Ne fais pas de phrases de plus de 25 mots.
+9. Si une section n'est pas applicable, mets "not_applicable" et justifie.
+
+JSON :"""
+
+RFP_JSON_REPAIR_PROMPT = """Répare la sortie JSON structurée suivante.
+Retourne exclusivement un objet JSON valide conforme exactement au schéma demandé, sans Markdown, sans commentaire et sans balise de raisonnement. Conserve seulement les informations déjà présentes ou retourne des champs vides valides si nécessaire.
+
+SORTIE INVALIDE :
+{invalid_response}
 
 JSON :"""
 
@@ -286,11 +274,14 @@ PROPOSITION À CORRIGER :
 INSTRUCTIONS DE CORRECTION :
 1. Corrige précisément chaque violation listée ci-dessus.
 2. Pour toute valeur chiffrée, pourcentage/SLA (ex. 99.8%), plage de support (ex. 24h/24, 7j/7), budget, durée ou date non présente dans le brief ou les sources, supprime la valeur ou qualifie-la explicitement avec la mention "(modalités indicatives à confirmer lors du cadrage)".
-3. Conserve la structure complète des sections demandées et retourne l'objet JSON rigoureusement conforme au schéma.
+3. Chaque citation [pdf-XXX] dans le corps du texte doit correspondre exactement à une preuve déclarée dans la liste `evidence` et soutenir directement la phrase où elle apparaît. Ne laisse aucune preuve orpheline.
+4. Chaque puce de la liste `bullets` doit avoir une ancre valide (`anchor: {{"type": "fact", "id": "..."}}`).
+5. Garde des phrases courtes et percutantes (<= 25 mots).
+6. Conserve la structure complète des sections demandées et retourne l'objet JSON rigoureusement conforme au schéma.
 
 JSON :"""
 
-RFP_PROMPT = RFP_SECTION_BATCH_PROMPT
+RFP_PROMPT = RFP_STANDARD_BATCH_PROMPT
 
 SYNTHESIZED_ANSWER_PROMPT = """Tu es Avaliance Copilot, un assistant d'analyse documentaire d'entreprise.
 Réponds uniquement à partir des preuves vérifiées fournies. La fiabilité et l'absence d'invention priment sur la fluidité.

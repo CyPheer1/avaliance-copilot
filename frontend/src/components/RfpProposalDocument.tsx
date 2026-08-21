@@ -1,16 +1,6 @@
-import ReactMarkdown from 'react-markdown'
-import remarkGfm from 'remark-gfm'
 import type { RfpProposal, RfpSection } from '../types.ts'
 
 export function RfpProposalDocument({ proposal }: { proposal: RfpProposal }) {
-  if (proposal.legacyMarkdown) {
-    return (
-      <div className="markdown-document">
-        <ReactMarkdown remarkPlugins={[remarkGfm]}>{proposal.legacyMarkdown}</ReactMarkdown>
-      </div>
-    )
-  }
-
   return (
     <div className="rfp-structured-document">
       {proposal.executiveSummary && (
@@ -62,6 +52,7 @@ function StructuredSection({ section }: { section: RfpSection }) {
       {!isNotApplicable && (
         <>
           {section.summary && <p className="rfp-section-summary">{section.summary}</p>}
+          {section.body && <p className="rfp-section-summary">{section.body}</p>}
 
           {prose.length > 0 && (
             <div className="rfp-proposal-prose">
@@ -164,7 +155,7 @@ function StructuredSection({ section }: { section: RfpSection }) {
           {section.bullets && section.bullets.length > 0 && (
             <ul className="rfp-bullets-list">
               {section.bullets.map((bullet, idx) => (
-                <li key={idx}>{bullet}</li>
+                <li key={idx}>{bullet.text}</li>
               ))}
             </ul>
           )}

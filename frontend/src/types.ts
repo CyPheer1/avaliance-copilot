@@ -208,6 +208,30 @@ export interface RfpClaim {
   confidence?: number
 }
 
+export interface RfpBulletAnchor {
+  type: 'fact' | 'requirement' | 'assumption' | 'recommendation'
+  id?: string | null
+}
+
+export interface RfpBullet {
+  text: string
+  anchor?: RfpBulletAnchor | null
+}
+
+export interface RfpSectionEvidence {
+  id: string
+  source_document_id: number
+  page?: number | null
+  chunk_id: number
+  quote?: string | null
+}
+
+export interface EvidencePacket {
+  requirement_id: string
+  status: 'SUPPORTED' | 'NO_RELEVANT_EVIDENCE'
+  evidence: RfpSectionEvidence[]
+}
+
 export interface RfpSection {
   key: string
   order?: number
@@ -215,15 +239,18 @@ export interface RfpSection {
   status?: SectionStatus
   statusReason?: string
   summary?: string
+  body?: string | null
   narrative?: string[]
   claims?: RfpClaim[]
-  bullets?: string[]
+  bullets?: RfpBullet[]
   tables: RfpTable[]
   questions?: string[]
   factsFromBrief: string[]
   verifiedReferences: RfpClaim[]
   recommendations: string[]
+  assumptions: string[]
   assumptionsToConfirm: string[]
+  evidence: RfpSectionEvidence[]
 }
 
 export interface RfpProposal {
@@ -262,10 +289,55 @@ export interface RfpQualityReport {
   warnings: string[]
 }
 
+export interface ComplianceMatrixRow {
+  requirement_id: string
+  covered: boolean
+  section_keys: string[]
+}
+
+export interface SourceRegisterEntry {
+  id: string
+  document_id: number
+  title: string
+  pages: number[]
+}
+
+export interface RfpAnnexes {
+  compliance_matrix: ComplianceMatrixRow[]
+  source_register: SourceRegisterEntry[]
+}
+
+export interface RfpMetrics {
+  call_a_ms: number
+  retrieval_ms: number
+  planning_ms: number
+  call_b_ms: number
+  call_c_ms: number
+  validation_ms: number
+  repair_ms: number
+  total_ms: number
+  word_count: number
+  section_count: number
+  fallback_used: boolean
+}
+
+export interface RfpJob {
+  id: string
+  status: 'queued' | 'running' | 'completed' | 'failed' | 'cancelled'
+  progressStep?: string
+  requestId?: string
+  errorCode?: string
+  errorMessageSafe?: string
+}
+
 export interface RfpResponse {
   requestId?: string
+  mode: 'brief' | 'standard' | 'full'
+  status: 'completed' | 'failed' | 'pending'
   requirements: Record<string, string | string[] | null>
   proposal: RfpProposal
+  annexes?: RfpAnnexes
+  metrics?: RfpMetrics
   sources?: RfpSource[]
   citations: RfpCitation[]
   coverageReport?: Array<{ needId: string; covered: boolean; sectionKeys: string[] }>

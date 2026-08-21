@@ -42,7 +42,7 @@ app:
     base-url: ${IA_SERVICE_URL:http://service-ia:8000}
     internal-token: ${INTERNAL_TOKEN}
     connect-timeout-ms: ${IA_CONNECT_TIMEOUT_MS:5000}
-    read-timeout-ms: ${IA_READ_TIMEOUT_MS:180000}
+    read-timeout-ms: ${IA_READ_TIMEOUT_MS:240000}
     stub-enabled: ${IA_STUB_ENABLED:false}
 
   admin:

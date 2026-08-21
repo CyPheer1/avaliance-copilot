@@ -1,0 +1,6 @@
+{
+  "status": 502,
+  "error": "IA service error",
+  "message": "IA service call failed: /rfp — 502 Bad Gateway: \"{\"detail\":\"La proposition générée ne satisfait pas aux critères de conformité et de provenance après réparation ciblée : Claim 'claim-015' contains factual number '10' not supported in source excerpt [doc-05]\"}\"",
+  "timestamp": "2026-08-17T23:18:49.781454314Z"
+}

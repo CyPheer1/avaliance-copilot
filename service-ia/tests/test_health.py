@@ -18,6 +18,7 @@ def _make_client() -> TestClient:
     )
     app = create_app(settings)
     app.router.lifespan_context = None  # type: ignore[assignment]
+    app.state.ollama_warmed = True
     return TestClient(app, raise_server_exceptions=False)
 
 

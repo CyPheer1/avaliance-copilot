@@ -208,6 +208,7 @@ class RfpAtomicNeed(BaseModel):
     id: str
     text: str
     category: str = "general"
+    priority: Literal["MUST", "SHOULD", "NICE_TO_HAVE"] = "SHOULD"
     source_excerpt: str | None = None
     start_offset: int | None = None
     end_offset: int | None = None
@@ -286,6 +287,29 @@ class RfpClaim(BaseModel):
     confidence: float = Field(default=1.0, ge=0.0, le=1.0)
 
 
+class RfpBulletAnchor(BaseModel):
+    type: Literal["fact", "requirement", "assumption", "recommendation"]
+    id: str | None = None
+
+class RfpBullet(BaseModel):
+    text: str
+    anchor: RfpBulletAnchor | None = None
+
+class RfpSectionEvidence(BaseModel):
+    # LLM output may select only `id`; all document metadata is hydrated from
+    # the request-scoped canonical evidence register before validation.
+    id: str
+    source_document_id: int = 0
+    document_name: str | None = None
+    page: int | None = None
+    chunk_id: int = 0
+    quote: str | None = None
+
+class EvidencePacket(BaseModel):
+    requirement_id: str
+    status: Literal["SUPPORTED", "NO_RELEVANT_EVIDENCE"]
+    evidence: list[RfpSectionEvidence]
+
 class RfpSection(BaseModel):
     key: str
     order: int = 1
@@ -293,11 +317,14 @@ class RfpSection(BaseModel):
     status: SectionStatus = "complete"
     status_reason: str | None = None
     summary: str | None = None
-    narrative: list[str] = Field(default_factory=list)
-    claims: list[RfpClaim] = Field(default_factory=list)
-    bullets: list[str] = Field(default_factory=list)
+    body: str | None = None
+    bullets: list[RfpBullet] = Field(default_factory=list)
     tables: list[RfpTable] = Field(default_factory=list)
     questions: list[str] = Field(default_factory=list)
+    assumptions: list[str] = Field(default_factory=list)
+    evidence: list[RfpSectionEvidence] = Field(default_factory=list)
+    narrative: list[str] = Field(default_factory=list)
+    claims: list[RfpClaim] = Field(default_factory=list)
     facts_from_brief: list[str] = Field(default_factory=list)
     verified_references: list[RfpClaim] = Field(default_factory=list)
     recommendations: list[str] = Field(default_factory=list)
@@ -346,6 +373,7 @@ class RfpQualityReport(BaseModel):
 
 
 class RfpRequest(BaseModel):
+    mode: Literal["brief", "standard", "full"] = "standard"
     description: str = Field(..., min_length=1)
     sector: str | None = None
     mission_type: str | None = None
@@ -353,11 +381,52 @@ class RfpRequest(BaseModel):
     request_id: str | None = None
     web_research_enabled: bool = False
 
+    def model_post_init(self, __context: object) -> None:
+        if self.web_research_enabled:
+            raise ValueError("Web research is not permitted for PDF-only RFP generation")
+
+class ComplianceMatrixRow(BaseModel):
+    requirement_id: str
+    requirement: str
+    covered: bool = False
+    section_keys: list[str] = Field(default_factory=list)
+    supporting_evidence_ids: list[str] = Field(default_factory=list)
+    coverage_reason: str | None = None
+
+class SourceRegisterEntry(BaseModel):
+    source_id: str
+    source_document_id: int
+    document_name: str
+    page: int | None = None
+    chunk_id: int
+    quote: str
+
+class RfpAnnexes(BaseModel):
+    compliance_matrix: list[ComplianceMatrixRow] = Field(default_factory=list)
+    source_register: list[SourceRegisterEntry] = Field(default_factory=list)
+
+
+class RfpMetrics(BaseModel):
+    call_a_ms: int = 0
+    retrieval_ms: int = 0
+    planning_ms: int = 0
+    call_b_ms: int = 0
+    call_c_ms: int = 0
+    validation_ms: int = 0
+    repair_ms: int = 0
+    total_ms: int = 0
+    word_count: int = 0
+    section_count: int = 0
+    fallback_used: bool = False
 
 class RfpResponse(BaseModel):
     request_id: str | None = None
+    mode: Literal["brief", "standard", "full"] = "standard"
+    status: Literal["completed", "failed", "pending", "degraded"] = "completed"
     requirements: RfpRequirements
     proposal: RfpProposal
+    annexes: RfpAnnexes = Field(default_factory=RfpAnnexes)
+    metrics: RfpMetrics = Field(default_factory=RfpMetrics)
     sources: list[RfpSource] = Field(default_factory=list)
     citations: list[RfpCitation] = Field(default_factory=list)
     coverage_report: list[RfpCoverageItem] = Field(default_factory=list)

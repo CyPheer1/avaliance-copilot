@@ -39,10 +39,15 @@ def rerank(query: str, passages: Sequence[str]) -> list[float]:
     if not passages:
         return []
     model = _get_model()
-    scores = model.predict(
-        [(query, passage) for passage in passages],
-        batch_size=16,
-        show_progress_bar=False,
-        convert_to_numpy=True,
-    )
+    # Hugging Face's fast tokenizer mutates its padding/truncation state during
+    # `predict`; concurrent calls on this shared cross-encoder raise
+    # `RuntimeError: Already borrowed`. Retrieval may fan out per RFP need, so
+    # serialize the inference section while retaining parallel database search.
+    with _MODEL_LOCK:
+        scores = model.predict(
+            [(query, passage) for passage in passages],
+            batch_size=16,
+            show_progress_bar=False,
+            convert_to_numpy=True,
+        )
     return [float(score) for score in scores]

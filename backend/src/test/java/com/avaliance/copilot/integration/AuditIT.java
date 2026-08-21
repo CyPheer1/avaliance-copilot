@@ -88,7 +88,7 @@ class AuditIT extends AbstractIntegrationTest {
     @Test
     @DisplayName("IA failure records an audit log with ERROR status")
     void failedRfpRecordsAuditWithErrorStatus() throws Exception {
-        RfpRequest request = new RfpRequest("Migration cloud critique", "Banque", "Conseil", 5);
+        RfpRequest request = new RfpRequest("Migration cloud critique", "standard", "Banque", "Conseil", 5);
         when(iaClientService.similar(anyMap())).thenThrow(new IaServiceException("IA unavailable"));
 
         mockMvc.perform(post("/api/rfp/generate")

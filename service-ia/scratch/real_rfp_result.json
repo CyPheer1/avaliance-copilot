@@ -1,0 +1,1027 @@
+{
+  "requestId": "0b222327-aa79-4b74-884b-cd3de211d45b",
+  "requirements": {
+    "sector": "sante",
+    "organization_type": "groupe",
+    "business_problem": [
+      "Groupe hospitalier : déployer un portail patient sécurisé HDS, interopérable avec le Dossier Patient Informatisé (DPI) via des API REST et FHIR, et intégrant l'authentification ProSanté Connect."
+    ],
+    "project_type": [
+      "Groupe hospitalier : déployer un portail patient sécurisé HDS, interopérable avec le Dossier Patient Informatisé (DPI) via des API REST et FHIR, et intégrant l'authentification ProSanté Connect."
+    ],
+    "technologies_and_constraints": [
+      "Groupe hospitalier : déployer un portail patient sécurisé HDS, interopérable avec le Dossier Patient Informatisé (DPI) via des API REST et FHIR, et intégrant l'authentification ProSanté Connect."
+    ],
+    "security_and_compliance": [
+      "Groupe hospitalier : déployer un portail patient sécurisé HDS, interopérable avec le Dossier Patient Informatisé (DPI) via des API REST et FHIR, et intégrant l'authentification ProSanté Connect."
+    ],
+    "expected_deliverables": [
+      "Groupe hospitalier : déployer un portail patient sécurisé HDS, interopérable avec le Dossier Patient Informatisé (DPI) via des API REST et FHIR, et intégrant l'authentification ProSanté Connect."
+    ],
+    "scale": [
+      "Groupe hospitalier : déployer un portail patient sécurisé HDS, interopérable avec le Dossier Patient Informatisé (DPI) via des API REST et FHIR, et intégrant l'authentification ProSanté Connect."
+    ],
+    "timeline_and_urgency": [],
+    "budget": null,
+    "criteria": [],
+    "dependencies": [],
+    "exclusions": [],
+    "assumptions": [],
+    "ambiguities_and_questions": [],
+    "atomic_needs": [
+      {
+        "id": "need-01",
+        "text": "Groupe hospitalier : déployer un portail patient sécurisé HDS",
+        "category": "security",
+        "source_excerpt": "Groupe hospitalier : déployer un portail patient sécurisé HDS"
+      },
+      {
+        "id": "need-02",
+        "text": "interopérable avec le Dossier Patient Informatisé (DPI) via des API REST",
+        "category": "technical",
+        "source_excerpt": "interopérable avec le Dossier Patient Informatisé (DPI) via des API REST"
+      },
+      {
+        "id": "need-03",
+        "text": "FHIR",
+        "category": "general",
+        "source_excerpt": "FHIR"
+      },
+      {
+        "id": "need-04",
+        "text": "et intégrant l'authentification ProSanté Connect",
+        "category": "security",
+        "source_excerpt": "et intégrant l'authentification ProSanté Connect."
+      }
+    ]
+  },
+  "proposal": {
+    "title": "Proposition de réponse — sante",
+    "executive_summary": "Cette proposition présente l'accompagnement d'Avaliance pour répondre aux enjeux de Groupe hospitalier : déployer un portail patient sécurisé HDS, interopérable avec le Dossier Patient Informatisé (DPI) via des API REST et FHIR, et intégrant l'authentification ProSanté Connect..",
+    "sections": [
+      {
+        "key": "executive_summary",
+        "order": 1,
+        "title": "Synthèse exécutive",
+        "status": "complete",
+        "status_reason": null,
+        "summary": null,
+        "narrative": [
+          "Cette proposition présente l'accompagnement d'Avaliance pour répondre aux enjeux de Groupe hospitalier : déployer un portail patient sécurisé HDS, interopérable avec le Dossier Patient Informatisé (DPI) via des API REST et FHIR, et intégrant l'authentification ProSanté Connect..",
+          "Notre dispositif associe expertise méthodologique, cadrage rigoureux et sécurisation des livrables."
+        ],
+        "claims": [
+          {
+            "id": "claim-001",
+            "text": "Groupe hospitalier : déployer un portail patient sécurisé HDS, interopérable avec le Dossier Patient Informatisé (DPI) via des API REST et FHIR, et intégrant l'authentification ProSanté Connect.",
+            "kind": "brief_fact",
+            "source_ids": [
+              "brief"
+            ],
+            "citation_indexes": [],
+            "confidence": 1.0
+          },
+          {
+            "id": "claim-002",
+            "text": "Engager un cadrage initial pour valider le périmètre et les jalons.",
+            "kind": "recommendation",
+            "source_ids": [],
+            "citation_indexes": [],
+            "confidence": 1.0
+          }
+        ],
+        "bullets": [],
+        "tables": [],
+        "questions": [],
+        "facts_from_brief": [
+          "Groupe hospitalier : déployer un portail patient sécurisé HDS, interopérable avec le Dossier Patient Informatisé (DPI) via des API REST et FHIR, et intégrant l'authentification ProSanté Connect."
+        ],
+        "verified_references": [],
+        "recommendations": [
+          "Engager un cadrage initial pour valider le périmètre et les jalons."
+        ],
+        "assumptions_to_confirm": []
+      },
+      {
+        "key": "context_understanding",
+        "order": 2,
+        "title": "Compréhension du contexte",
+        "status": "complete",
+        "status_reason": null,
+        "summary": null,
+        "narrative": [
+          "Le contexte porte sur les besoins suivants : Groupe hospitalier : déployer un portail patient sécurisé HDS, interopérable avec le Dossier Patient Informatisé (DPI) via des API REST, FHIR."
+        ],
+        "claims": [
+          {
+            "id": "claim-ctx-1",
+            "text": "Groupe hospitalier : déployer un portail patient sécurisé HDS",
+            "kind": "brief_fact",
+            "source_ids": [
+              "brief"
+            ],
+            "citation_indexes": [],
+            "confidence": 1.0
+          },
+          {
+            "id": "claim-ctx-2",
+            "text": "interopérable avec le Dossier Patient Informatisé (DPI) via des API REST",
+            "kind": "brief_fact",
+            "source_ids": [
+              "brief"
+            ],
+            "citation_indexes": [],
+            "confidence": 1.0
+          },
+          {
+            "id": "claim-ctx-3",
+            "text": "FHIR",
+            "kind": "brief_fact",
+            "source_ids": [
+              "brief"
+            ],
+            "citation_indexes": [],
+            "confidence": 1.0
+          }
+        ],
+        "bullets": [],
+        "tables": [],
+        "questions": [],
+        "facts_from_brief": [
+          "Groupe hospitalier : déployer un portail patient sécurisé HDS",
+          "interopérable avec le Dossier Patient Informatisé (DPI) via des API REST",
+          "FHIR"
+        ],
+        "verified_references": [],
+        "recommendations": [
+          "Le contexte porte sur les besoins suivants : Groupe hospitalier : déployer un portail patient sécurisé HDS, interopérable avec le Dossier Patient Informatisé (DPI) via des API REST, FHIR."
+        ],
+        "assumptions_to_confirm": []
+      },
+      {
+        "key": "stakes_and_problem",
+        "order": 3,
+        "title": "Enjeux et problème à résoudre",
+        "status": "complete",
+        "status_reason": null,
+        "summary": null,
+        "narrative": [
+          "Les enjeux principaux identifiés nécessitent un traitement structuré et sans rupture d'activité."
+        ],
+        "claims": [
+          {
+            "id": "claim-stk-1",
+            "text": "Groupe hospitalier : déployer un portail patient sécurisé HDS, interopérable avec le Dossier Patient Informatisé (DPI) via des API REST et FHIR, et intégrant l'authentification ProSanté Connect.",
+            "kind": "brief_fact",
+            "source_ids": [
+              "brief"
+            ],
+            "citation_indexes": [],
+            "confidence": 1.0
+          }
+        ],
+        "bullets": [],
+        "tables": [],
+        "questions": [],
+        "facts_from_brief": [
+          "Groupe hospitalier : déployer un portail patient sécurisé HDS, interopérable avec le Dossier Patient Informatisé (DPI) via des API REST et FHIR, et intégrant l'authentification ProSanté Connect."
+        ],
+        "verified_references": [],
+        "recommendations": [
+          "Les enjeux principaux identifiés nécessitent un traitement structuré et sans rupture d'activité."
+        ],
+        "assumptions_to_confirm": []
+      },
+      {
+        "key": "objectives_and_outcomes",
+        "order": 4,
+        "title": "Objectifs et résultats attendus",
+        "status": "complete",
+        "status_reason": null,
+        "summary": null,
+        "narrative": [
+          "Les objectifs de la prestation sont déclinés en indicateurs observables et résultats vérifiables."
+        ],
+        "claims": [],
+        "bullets": [],
+        "tables": [
+          {
+            "title": "Objectifs et indicateurs de succès",
+            "columns": [
+              "Objectif",
+              "Indicateur de succès",
+              "Cible attendue"
+            ],
+            "rows": [
+              [
+                "Groupe hospitalier : déployer un portail patient sécurisé HDS",
+                "Conformité et recette validée",
+                "100% conforme"
+              ],
+              [
+                "interopérable avec le Dossier Patient Informatisé (DPI) via des API REST",
+                "Conformité et recette validée",
+                "100% conforme"
+              ],
+              [
+                "FHIR",
+                "Conformité et recette validée",
+                "100% conforme"
+              ],
+              [
+                "et intégrant l'authentification ProSanté Connect",
+                "Conformité et recette validée",
+                "100% conforme"
+              ]
+            ]
+          }
+        ],
+        "questions": [],
+        "facts_from_brief": [],
+        "verified_references": [],
+        "recommendations": [
+          "Les objectifs de la prestation sont déclinés en indicateurs observables et résultats vérifiables."
+        ],
+        "assumptions_to_confirm": []
+      },
+      {
+        "key": "scope_inclusions",
+        "order": 5,
+        "title": "Périmètre inclus",
+        "status": "complete",
+        "status_reason": null,
+        "summary": null,
+        "narrative": [
+          "Le périmètre pris en charge comprend les chantiers suivants :"
+        ],
+        "claims": [],
+        "bullets": [
+          "Chantier : Groupe hospitalier : déployer un portail patient sécurisé HDS",
+          "Chantier : interopérable avec le Dossier Patient Informatisé (DPI) via des API REST",
+          "Chantier : FHIR",
+          "Chantier : et intégrant l'authentification ProSanté Connect"
+        ],
+        "tables": [],
+        "questions": [],
+        "facts_from_brief": [],
+        "verified_references": [],
+        "recommendations": [
+          "Le périmètre pris en charge comprend les chantiers suivants :"
+        ],
+        "assumptions_to_confirm": []
+      },
+      {
+        "key": "scope_exclusions",
+        "order": 6,
+        "title": "Périmètre exclu",
+        "status": "complete",
+        "status_reason": null,
+        "summary": null,
+        "narrative": [
+          "Les prestations suivantes sont expressément exclues du périmètre de base :"
+        ],
+        "claims": [],
+        "bullets": [
+          "Acquisition de licences logicielles tierces ou matériels",
+          "Développements spécifiques hors périmètre convenu",
+          "Exploitation et maintien en conditions opérationnelles en dehors de la période de garantie"
+        ],
+        "tables": [],
+        "questions": [],
+        "facts_from_brief": [],
+        "verified_references": [],
+        "recommendations": [
+          "Les prestations suivantes sont expressément exclues du périmètre de base :"
+        ],
+        "assumptions_to_confirm": []
+      },
+      {
+        "key": "functional_solution",
+        "order": 7,
+        "title": "Solution fonctionnelle proposée",
+        "status": "complete",
+        "status_reason": null,
+        "summary": null,
+        "narrative": [
+          "La solution fonctionnelle s'articule autour des cas d'usage métiers prioritaires.",
+          "Chaque fonction est conçue pour simplifier les parcours et assurer l'intégrité des opérations."
+        ],
+        "claims": [
+          {
+            "id": "claim-fn-1",
+            "text": "Groupe hospitalier : déployer un portail patient sécurisé HDS",
+            "kind": "recommendation",
+            "source_ids": [],
+            "citation_indexes": [],
+            "confidence": 1.0
+          },
+          {
+            "id": "claim-fn-2",
+            "text": "interopérable avec le Dossier Patient Informatisé (DPI) via des API REST",
+            "kind": "recommendation",
+            "source_ids": [],
+            "citation_indexes": [],
+            "confidence": 1.0
+          },
+          {
+            "id": "claim-fn-3",
+            "text": "FHIR",
+            "kind": "recommendation",
+            "source_ids": [],
+            "citation_indexes": [],
+            "confidence": 1.0
+          }
+        ],
+        "bullets": [],
+        "tables": [],
+        "questions": [],
+        "facts_from_brief": [],
+        "verified_references": [],
+        "recommendations": [
+          "Groupe hospitalier : déployer un portail patient sécurisé HDS",
+          "interopérable avec le Dossier Patient Informatisé (DPI) via des API REST",
+          "FHIR"
+        ],
+        "assumptions_to_confirm": []
+      },
+      {
+        "key": "technical_architecture",
+        "order": 8,
+        "title": "Architecture technique cible",
+        "status": "complete",
+        "status_reason": null,
+        "summary": null,
+        "narrative": [
+          "L'architecture repose sur les composants identifiés : Groupe hospitalier : déployer un portail patient sécurisé HDS, interopérable avec le Dossier Patient Informatisé (DPI) via des API REST et FHIR, et intégrant l'authentification ProSanté Connect.."
+        ],
+        "claims": [],
+        "bullets": [],
+        "tables": [],
+        "questions": [],
+        "facts_from_brief": [],
+        "verified_references": [],
+        "recommendations": [
+          "L'architecture repose sur les composants identifiés : Groupe hospitalier : déployer un portail patient sécurisé HDS, interopérable avec le Dossier Patient Informatisé (DPI) via des API REST et FHIR, et intégrant l'authentification ProSanté Connect.."
+        ],
+        "assumptions_to_confirm": []
+      },
+      {
+        "key": "integrations_and_interfaces",
+        "order": 9,
+        "title": "Intégrations et interfaces",
+        "status": "complete",
+        "status_reason": null,
+        "summary": null,
+        "narrative": [
+          "Les intégrations avec le système d'information s'effectuent via des interfaces documentées et des API sécurisées."
+        ],
+        "claims": [],
+        "bullets": [],
+        "tables": [],
+        "questions": [],
+        "facts_from_brief": [],
+        "verified_references": [],
+        "recommendations": [
+          "Les intégrations avec le système d'information s'effectuent via des interfaces documentées et des API sécurisées."
+        ],
+        "assumptions_to_confirm": []
+      },
+      {
+        "key": "security_compliance_governance",
+        "order": 10,
+        "title": "Sécurité, conformité et gouvernance des données",
+        "status": "complete",
+        "status_reason": null,
+        "summary": null,
+        "narrative": [
+          "Les exigences de sécurité et de conformité (Groupe hospitalier : déployer un portail patient sécurisé HDS, interopérable avec le Dossier Patient Informatisé (DPI) via des API REST et FHIR, et intégrant l'authentification ProSanté Connect.) font l'objet d'un suivi dédié."
+        ],
+        "claims": [
+          {
+            "id": "claim-sec-1",
+            "text": "Groupe hospitalier : déployer un portail patient sécurisé HDS, interopérable avec le Dossier Patient Informatisé (DPI) via des API REST et FHIR, et intégrant l'authentification ProSanté Connect.",
+            "kind": "brief_fact",
+            "source_ids": [
+              "brief"
+            ],
+            "citation_indexes": [],
+            "confidence": 1.0
+          }
+        ],
+        "bullets": [],
+        "tables": [],
+        "questions": [],
+        "facts_from_brief": [
+          "Groupe hospitalier : déployer un portail patient sécurisé HDS, interopérable avec le Dossier Patient Informatisé (DPI) via des API REST et FHIR, et intégrant l'authentification ProSanté Connect."
+        ],
+        "verified_references": [],
+        "recommendations": [
+          "Les exigences de sécurité et de conformité (Groupe hospitalier : déployer un portail patient sécurisé HDS, interopérable avec le Dossier Patient Informatisé (DPI) via des API REST et FHIR, et intégrant l'authentification ProSanté Connect.) font l'objet d'un suivi dédié."
+        ],
+        "assumptions_to_confirm": []
+      },
+      {
+        "key": "methodology_phases_deliverables",
+        "order": 11,
+        "title": "Démarche, phases et livrables",
+        "status": "complete",
+        "status_reason": null,
+        "summary": null,
+        "narrative": [
+          "La démarche proposée est structurée en trois phases progressives et maîtrisées :"
+        ],
+        "claims": [],
+        "bullets": [],
+        "tables": [
+          {
+            "title": "Phases et livrables de la mission",
+            "columns": [
+              "Phase",
+              "Objectif",
+              "Livrable clé",
+              "Critère de sortie"
+            ],
+            "rows": [
+              [
+                "Phase 1 : Cadrage & Diagnostic",
+                "Valider les exigences et la cible",
+                "Dossier de cadrage",
+                "Validation conjointe"
+              ],
+              [
+                "Phase 2 : Conception & Réalisation",
+                "Construire et intégrer les composants",
+                "Dossier technique & Lot fonctionnel",
+                "Recette opérationnelle"
+              ],
+              [
+                "Phase 3 : Déploiement & Transfert",
+                "Mettre en production et former",
+                "PV de recette & Support",
+                "Autonomie des équipes"
+              ]
+            ]
+          }
+        ],
+        "questions": [],
+        "facts_from_brief": [],
+        "verified_references": [],
+        "recommendations": [
+          "La démarche proposée est structurée en trois phases progressives et maîtrisées :"
+        ],
+        "assumptions_to_confirm": []
+      },
+      {
+        "key": "planning_and_milestones",
+        "order": 12,
+        "title": "Planning et jalons",
+        "status": "complete",
+        "status_reason": null,
+        "summary": null,
+        "narrative": [
+          "Le planning prévisionnel est jalonné par des échéances relatives garantissant la visibilité opérationnelle."
+        ],
+        "claims": [],
+        "bullets": [],
+        "tables": [
+          {
+            "title": "Jalons directeurs",
+            "columns": [
+              "Jalon",
+              "Échéance relative",
+              "Objectif associé"
+            ],
+            "rows": [
+              [
+                "J1 — Lancement",
+                "T0",
+                "Validation du plan de travail"
+              ],
+              [
+                "J2 — Fin de cadrage",
+                "T0 + 4 semaines",
+                "Validation du dossier d'architecture"
+              ],
+              [
+                "J3 — Recette",
+                "T0 + 10 semaines",
+                "Validation des cas de tests"
+              ],
+              [
+                "J4 — Mise en service",
+                "T0 + 12 semaines",
+                "Bascule en production"
+              ]
+            ]
+          }
+        ],
+        "questions": [],
+        "facts_from_brief": [],
+        "verified_references": [],
+        "recommendations": [
+          "Le planning prévisionnel est jalonné par des échéances relatives garantissant la visibilité opérationnelle."
+        ],
+        "assumptions_to_confirm": []
+      },
+      {
+        "key": "team_and_governance",
+        "order": 13,
+        "title": "Équipe, rôles et gouvernance",
+        "status": "complete",
+        "status_reason": null,
+        "summary": null,
+        "narrative": [
+          "Le dispositif s'appuie sur une équipe sénior et une gouvernance resserrée."
+        ],
+        "claims": [],
+        "bullets": [],
+        "tables": [
+          {
+            "title": "Comitologie et gouvernance",
+            "columns": [
+              "Instance",
+              "Fréquence",
+              "Participants",
+              "Rôle"
+            ],
+            "rows": [
+              [
+                "Comité de Projet (COPIL)",
+                "Mensuel",
+                "Directeur de mission & Sponsors",
+                "Arbitrages et suivi stratégique"
+              ],
+              [
+                "Comité Technique (COTEC)",
+                "Hebdomadaire",
+                "Chef de projet & Équipe",
+                "Suivi opérationnel et risques"
+              ]
+            ]
+          }
+        ],
+        "questions": [],
+        "facts_from_brief": [],
+        "verified_references": [],
+        "recommendations": [
+          "Le dispositif s'appuie sur une équipe sénior et une gouvernance resserrée."
+        ],
+        "assumptions_to_confirm": []
+      },
+      {
+        "key": "testing_and_acceptance",
+        "order": 14,
+        "title": "Stratégie de tests et recette",
+        "status": "complete",
+        "status_reason": null,
+        "summary": null,
+        "narrative": [
+          "La stratégie de recette repose sur une validation continue des exigences et la traçabilité des anomalies."
+        ],
+        "claims": [],
+        "bullets": [],
+        "tables": [],
+        "questions": [],
+        "facts_from_brief": [],
+        "verified_references": [],
+        "recommendations": [
+          "La stratégie de recette repose sur une validation continue des exigences et la traçabilité des anomalies."
+        ],
+        "assumptions_to_confirm": []
+      },
+      {
+        "key": "migration_deployment_reversibility",
+        "order": 15,
+        "title": "Migration, déploiement et réversibilité",
+        "status": "complete",
+        "status_reason": null,
+        "summary": null,
+        "narrative": [
+          "La bascule est planifiée avec une procédure de repli formalisée et des clauses de réversibilité complètes."
+        ],
+        "claims": [],
+        "bullets": [],
+        "tables": [],
+        "questions": [],
+        "facts_from_brief": [],
+        "verified_references": [],
+        "recommendations": [
+          "La bascule est planifiée avec une procédure de repli formalisée et des clauses de réversibilité complètes."
+        ],
+        "assumptions_to_confirm": []
+      },
+      {
+        "key": "change_management_training",
+        "order": 16,
+        "title": "Conduite du changement, formation et transfert",
+        "status": "complete",
+        "status_reason": null,
+        "summary": null,
+        "narrative": [
+          "Un plan d'accompagnement au changement et de transfert de compétences est déployé auprès des équipes."
+        ],
+        "claims": [],
+        "bullets": [],
+        "tables": [],
+        "questions": [],
+        "facts_from_brief": [],
+        "verified_references": [],
+        "recommendations": [
+          "Un plan d'accompagnement au changement et de transfert de compétences est déployé auprès des équipes."
+        ],
+        "assumptions_to_confirm": []
+      },
+      {
+        "key": "operations_and_support",
+        "order": 17,
+        "title": "Exploitation, support et maintenance",
+        "status": "complete",
+        "status_reason": null,
+        "summary": null,
+        "narrative": [
+          "Le maintien en conditions opérationnelles inclut une période de garantie post-démarrage et un support niveau 3."
+        ],
+        "claims": [],
+        "bullets": [],
+        "tables": [],
+        "questions": [],
+        "facts_from_brief": [],
+        "verified_references": [],
+        "recommendations": [
+          "Le maintien en conditions opérationnelles inclut une période de garantie post-démarrage et un support niveau 3."
+        ],
+        "assumptions_to_confirm": []
+      },
+      {
+        "key": "risks_assumptions_clarifications",
+        "order": 18,
+        "title": "Risques, dépendances, hypothèses et points à clarifier",
+        "status": "complete",
+        "status_reason": null,
+        "summary": null,
+        "narrative": [
+          "Les risques identifiés et les mesures de maîtrise associées sont consignés ci-dessous :"
+        ],
+        "claims": [],
+        "bullets": [],
+        "tables": [
+          {
+            "title": "Matrice des risques et parades",
+            "columns": [
+              "Risque identifié",
+              "Impact possible",
+              "Mesure préventive",
+              "Plan de repli"
+            ],
+            "rows": [
+              [
+                "Disponibilité des référents métier",
+                "Moyen",
+                "Planification anticipée des ateliers",
+                "Délégation formalisée"
+              ],
+              [
+                "Hétérogénéité des sources de données",
+                "Élevé",
+                "Phase de diagnostic approfondie en phase 1",
+                "Périmètre de données prioritaire"
+              ]
+            ]
+          }
+        ],
+        "questions": [
+          "Confirmer le calendrier des instances décisionnelles client."
+        ],
+        "facts_from_brief": [],
+        "verified_references": [],
+        "recommendations": [
+          "Les risques identifiés et les mesures de maîtrise associées sont consignés ci-dessous :"
+        ],
+        "assumptions_to_confirm": [
+          "Confirmer le calendrier des instances décisionnelles client."
+        ]
+      },
+      {
+        "key": "references_differentiation_next_steps",
+        "order": 19,
+        "title": "Références, différenciation Avaliance et prochaines étapes",
+        "status": "complete",
+        "status_reason": null,
+        "summary": null,
+        "narrative": [
+          "Avaliance apporte une expertise reconnue et un engagement d'excellence opérationnelle."
+        ],
+        "claims": [
+          {
+            "id": "claim-ref-1",
+            "text": "Référence interne : 05_Groupe_Santelia_Portail_Patient_Interoperabilite_Dossier_Projet.pdf (p. 1) — ## Portail patient et interopérabilité du dossier de soins\n\nGroupe Santélia - Direction des services numériques · Dossier de fin de projet\n\nCLIENT\n\nGroupe Santélia\n\nSECTEUR\n\nSanté - établissements de soins\n\nTYPE DE MISSION\n\nPortail usager e...",
+            "kind": "internal_evidence",
+            "source_ids": [
+              "doc-01"
+            ],
+            "citation_indexes": [
+              1
+            ],
+            "confidence": 1.0
+          },
+          {
+            "id": "claim-ref-2",
+            "text": "Référence interne : 05_Groupe_Santelia_Portail_Patient_Interoperabilite_Dossier_Projet.pdf (p. 6) — Indicateur: Disponibilité du portail; Valeur initiale: Sans objet; Cible: ≥ 99,8%; Mode de mesure: Sonde externe\n\nIndicateur: Conformité d'accessibilité numérique; Valeur initiale: Sans objet; Cible: ≥ 90 %des critères; Mode de mesure: Audi...",
+            "kind": "internal_evidence",
+            "source_ids": [
+              "doc-02"
+            ],
+            "citation_indexes": [
+              2
+            ],
+            "confidence": 1.0
+          },
+          {
+            "id": "claim-ref-3",
+            "text": "Référence interne : 02_Transovia_Logistique_ORION_WMS_Bilan_Projet.pdf (p. 6) — ## 4. Périmètre et interfaces\n\n## 4.1 Périmètre inclus\n\n- Réception, rangement, inventaire, préparation, emballage et expédition.\n\n- Terminaux radio, étiquetage et orchestration convoyeurs.\n\n- Migration des stocks ouverts et des référentiel...",
+            "kind": "internal_evidence",
+            "source_ids": [
+              "doc-03"
+            ],
+            "citation_indexes": [
+              3
+            ],
+            "confidence": 1.0
+          },
+          {
+            "id": "claim-ref-4",
+            "text": "Référence interne : 01_Helvia_Assurances_Refonte_Sinistres_Bilan_Projet.pdf (p. 7) — ## 4.2 Périmètre exclu\n\nSont restés hors périmètre : le progiciel comptable et le grand livre, la refonte du CRM commercial, la souscription et la tarification des contrats, les modèles actuariels de provisionnement, l'archivage froid antér...",
+            "kind": "internal_evidence",
+            "source_ids": [
+              "doc-04"
+            ],
+            "citation_indexes": [
+              4
+            ],
+            "confidence": 1.0
+          },
+          {
+            "id": "claim-ref-5",
+            "text": "Référence interne : 04_Volteris_Energies_Socle_IoT_Telereleve_Dossier_Projet.pdf (p. 10) — Phase: P4 -Calcul et exposition; Période: Avril -Août 2025; Durée: 17 sem.; Contenu principal: Reconstitution des index, agrégats, API, alimentation de la facturation, portail exploitant; Livrables: API publiée, portail livré\n\nPhase: P5 -Mi...",
+            "kind": "internal_evidence",
+            "source_ids": [
+              "doc-05"
+            ],
+            "citation_indexes": [
+              5
+            ],
+            "confidence": 1.0
+          }
+        ],
+        "bullets": [
+          "Action 1 : Réunion de cadrage initiale et alignement sur les priorités",
+          "Action 2 : Revue des accès et des documentations existantes",
+          "Action 3 : Validation du planning détaillé et démarrage des ateliers"
+        ],
+        "tables": [],
+        "questions": [],
+        "facts_from_brief": [],
+        "verified_references": [
+          {
+            "id": "claim-ref-1",
+            "text": "Référence interne : 05_Groupe_Santelia_Portail_Patient_Interoperabilite_Dossier_Projet.pdf (p. 1) — ## Portail patient et interopérabilité du dossier de soins\n\nGroupe Santélia - Direction des services numériques · Dossier de fin de projet\n\nCLIENT\n\nGroupe Santélia\n\nSECTEUR\n\nSanté - établissements de soins\n\nTYPE DE MISSION\n\nPortail usager e...",
+            "kind": "internal_evidence",
+            "source_ids": [
+              "doc-01"
+            ],
+            "citation_indexes": [
+              1
+            ],
+            "confidence": 1.0
+          },
+          {
+            "id": "claim-ref-2",
+            "text": "Référence interne : 05_Groupe_Santelia_Portail_Patient_Interoperabilite_Dossier_Projet.pdf (p. 6) — Indicateur: Disponibilité du portail; Valeur initiale: Sans objet; Cible: ≥ 99,8%; Mode de mesure: Sonde externe\n\nIndicateur: Conformité d'accessibilité numérique; Valeur initiale: Sans objet; Cible: ≥ 90 %des critères; Mode de mesure: Audi...",
+            "kind": "internal_evidence",
+            "source_ids": [
+              "doc-02"
+            ],
+            "citation_indexes": [
+              2
+            ],
+            "confidence": 1.0
+          },
+          {
+            "id": "claim-ref-3",
+            "text": "Référence interne : 02_Transovia_Logistique_ORION_WMS_Bilan_Projet.pdf (p. 6) — ## 4. Périmètre et interfaces\n\n## 4.1 Périmètre inclus\n\n- Réception, rangement, inventaire, préparation, emballage et expédition.\n\n- Terminaux radio, étiquetage et orchestration convoyeurs.\n\n- Migration des stocks ouverts et des référentiel...",
+            "kind": "internal_evidence",
+            "source_ids": [
+              "doc-03"
+            ],
+            "citation_indexes": [
+              3
+            ],
+            "confidence": 1.0
+          },
+          {
+            "id": "claim-ref-4",
+            "text": "Référence interne : 01_Helvia_Assurances_Refonte_Sinistres_Bilan_Projet.pdf (p. 7) — ## 4.2 Périmètre exclu\n\nSont restés hors périmètre : le progiciel comptable et le grand livre, la refonte du CRM commercial, la souscription et la tarification des contrats, les modèles actuariels de provisionnement, l'archivage froid antér...",
+            "kind": "internal_evidence",
+            "source_ids": [
+              "doc-04"
+            ],
+            "citation_indexes": [
+              4
+            ],
+            "confidence": 1.0
+          },
+          {
+            "id": "claim-ref-5",
+            "text": "Référence interne : 04_Volteris_Energies_Socle_IoT_Telereleve_Dossier_Projet.pdf (p. 10) — Phase: P4 -Calcul et exposition; Période: Avril -Août 2025; Durée: 17 sem.; Contenu principal: Reconstitution des index, agrégats, API, alimentation de la facturation, portail exploitant; Livrables: API publiée, portail livré\n\nPhase: P5 -Mi...",
+            "kind": "internal_evidence",
+            "source_ids": [
+              "doc-05"
+            ],
+            "citation_indexes": [
+              5
+            ],
+            "confidence": 1.0
+          }
+        ],
+        "recommendations": [
+          "Avaliance apporte une expertise reconnue et un engagement d'excellence opérationnelle."
+        ],
+        "assumptions_to_confirm": []
+      }
+    ],
+    "legacy_markdown": null
+  },
+  "sources": [
+    {
+      "id": "doc-01",
+      "type": "internal_pdf",
+      "title": "05_Groupe_Santelia_Portail_Patient_Interoperabilite_Dossier_Projet.pdf (p. 1)",
+      "document_id": 8,
+      "document_name": "05_Groupe_Santelia_Portail_Patient_Interoperabilite_Dossier_Projet.pdf",
+      "page": 1,
+      "chunk_id": 1102,
+      "excerpt": "## Portail patient et interopérabilité du dossier de soins\n\nGroupe Santélia - Direction des services numériques · Dossier de fin de projet\n\nCLIENT\n\nGroupe Santélia\n\nSECTEUR\n\nSanté - établissements de soins\n\nTYPE DE MISSION\n\nPortail usager e...",
+      "url": null,
+      "publisher": null,
+      "score": 0.587890625
+    },
+    {
+      "id": "doc-02",
+      "type": "internal_pdf",
+      "title": "05_Groupe_Santelia_Portail_Patient_Interoperabilite_Dossier_Projet.pdf (p. 6)",
+      "document_id": 8,
+      "document_name": "05_Groupe_Santelia_Portail_Patient_Interoperabilite_Dossier_Projet.pdf",
+      "page": 6,
+      "chunk_id": 1115,
+      "excerpt": "Indicateur: Disponibilité du portail; Valeur initiale: Sans objet; Cible: ≥ 99,8%; Mode de mesure: Sonde externe\n\nIndicateur: Conformité d'accessibilité numérique; Valeur initiale: Sans objet; Cible: ≥ 90 %des critères; Mode de mesure: Audi...",
+      "url": null,
+      "publisher": null,
+      "score": 0.273193359375
+    },
+    {
+      "id": "doc-03",
+      "type": "internal_pdf",
+      "title": "02_Transovia_Logistique_ORION_WMS_Bilan_Projet.pdf (p. 6)",
+      "document_id": 10,
+      "document_name": "02_Transovia_Logistique_ORION_WMS_Bilan_Projet.pdf",
+      "page": 6,
+      "chunk_id": 1194,
+      "excerpt": "## 4. Périmètre et interfaces\n\n## 4.1 Périmètre inclus\n\n- Réception, rangement, inventaire, préparation, emballage et expédition.\n\n- Terminaux radio, étiquetage et orchestration convoyeurs.\n\n- Migration des stocks ouverts et des référentiel...",
+      "url": null,
+      "publisher": null,
+      "score": 0.007122039794921875
+    },
+    {
+      "id": "doc-04",
+      "type": "internal_pdf",
+      "title": "01_Helvia_Assurances_Refonte_Sinistres_Bilan_Projet.pdf (p. 7)",
+      "document_id": 4,
+      "document_name": "01_Helvia_Assurances_Refonte_Sinistres_Bilan_Projet.pdf",
+      "page": 7,
+      "chunk_id": 897,
+      "excerpt": "## 4.2 Périmètre exclu\n\nSont restés hors périmètre : le progiciel comptable et le grand livre, la refonte du CRM commercial, la souscription et la tarification des contrats, les modèles actuariels de provisionnement, l'archivage froid antér...",
+      "url": null,
+      "publisher": null,
+      "score": 0.006313323974609375
+    },
+    {
+      "id": "doc-05",
+      "type": "internal_pdf",
+      "title": "04_Volteris_Energies_Socle_IoT_Telereleve_Dossier_Projet.pdf (p. 10)",
+      "document_id": 7,
+      "document_name": "04_Volteris_Energies_Socle_IoT_Telereleve_Dossier_Projet.pdf",
+      "page": 10,
+      "chunk_id": 1072,
+      "excerpt": "Phase: P4 -Calcul et exposition; Période: Avril -Août 2025; Durée: 17 sem.; Contenu principal: Reconstitution des index, agrégats, API, alimentation de la facturation, portail exploitant; Livrables: API publiée, portail livré\n\nPhase: P5 -Mi...",
+      "url": null,
+      "publisher": null,
+      "score": 0.0013828277587890625
+    }
+  ],
+  "coverageReport": [
+    {
+      "need_id": "need-01",
+      "covered": true,
+      "section_keys": [
+        "executive_summary",
+        "context_understanding",
+        "functional_solution",
+        "technical_architecture",
+        "security_compliance_governance"
+      ]
+    },
+    {
+      "need_id": "need-02",
+      "covered": true,
+      "section_keys": [
+        "executive_summary",
+        "context_understanding",
+        "objectives_and_outcomes",
+        "scope_exclusions",
+        "functional_solution",
+        "technical_architecture",
+        "integrations_and_interfaces",
+        "security_compliance_governance",
+        "migration_deployment_reversibility"
+      ]
+    },
+    {
+      "need_id": "need-03",
+      "covered": true,
+      "section_keys": [
+        "executive_summary",
+        "context_understanding",
+        "functional_solution",
+        "technical_architecture",
+        "security_compliance_governance"
+      ]
+    },
+    {
+      "need_id": "need-04",
+      "covered": true,
+      "section_keys": [
+        "executive_summary",
+        "technical_architecture",
+        "security_compliance_governance"
+      ]
+    }
+  ],
+  "citations": [
+    {
+      "citation_id": "rfp-1102",
+      "chunk_id": 1102,
+      "document_id": 8,
+      "document_name": "05_Groupe_Santelia_Portail_Patient_Interoperabilite_Dossier_Projet.pdf",
+      "page": 1,
+      "content": "## Portail patient et interopérabilité du dossier de soins\n\nGroupe Santélia - Direction des services numériques · Dossier de fin de projet\n\nCLIENT\n\nGroupe Santélia\n\nSECTEUR\n\nSanté - établissements de soins\n\nTYPE DE MISSION\n\nPortail usager et interopérabilité applicative\n\nPÉRIODE\n\nAvril 2025 - Mars 2026 (12 mois)\n\nBUDGET CONSOMMÉ\n\n2 705 967 € HT\n\nÉQUIPE\n\n18 personnes (13 Avaliance, 5 Santélia)\n\nRÉFÉRENCE\n\nAVL-2026-STL-008\n\nVERSION\n\n1.5 - 27 mars 2026\n\nSTATUT\n\nProjet clôturé, déploiement généralisé\n\n## Objet du document\n\nCe dossier de fin de projet présente la mise en œuvre du portail patient du Groupe Santélia et de son socle d'interopérabilité : parcours de préadmission en ligne, API conformes aux normes du secteur, intégration des référentiels nationaux d'identité, hébergement certifié pour les données de santé, résultats d'usage sur les six premiers mois et trajectoire recommandée.",
+      "source_index": 1
+    },
+    {
+      "citation_id": "rfp-1115",
+      "chunk_id": 1115,
+      "document_id": 8,
+      "document_name": "05_Groupe_Santelia_Portail_Patient_Interoperabilite_Dossier_Projet.pdf",
+      "page": 6,
+      "content": "Indicateur: Disponibilité du portail; Valeur initiale: Sans objet; Cible: ≥ 99,8%; Mode de mesure: Sonde externe\n\nIndicateur: Conformité d'accessibilité numérique; Valeur initiale: Sans objet; Cible: ≥ 90 %des critères; Mode de mesure: Audit externe\n\n## 3.2 Périmètre fonctionnel livré\n\n- Création de compte patient avec vérification d'identité et rattachement au dossier existant.\n\n- Préadmission en ligne : coordonnées, couverture sociale, personne de confiance, directives anticipées.\n\n- Dépôt sécurisé de documents avec reconnaissance des pièces attendues par type de séjour.\n\n- Recueil et révocation des consentements, avec historique horodaté.\n\n- Prise et modification de rendez-vous pour 14 spécialités, avec rappel automatique.\n\n- Consultation des comptes rendus et résultats mis à disposition par le praticien.\n\n- Questionnaire préopératoire et questionnaire de sortie.",
+      "source_index": 2
+    },
+    {
+      "citation_id": "rfp-1194",
+      "chunk_id": 1194,
+      "document_id": 10,
+      "document_name": "02_Transovia_Logistique_ORION_WMS_Bilan_Projet.pdf",
+      "page": 6,
+      "content": "## 4. Périmètre et interfaces\n\n## 4.1 Périmètre inclus\n\n- Réception, rangement, inventaire, préparation, emballage et expédition.\n\n- Terminaux radio, étiquetage et orchestration convoyeurs.\n\n- Migration des stocks ouverts et des référentiels articles.\n\n- Formation de 620 opérateurs et 48 superviseurs.\n\n## 4.2 Périmètre exclu\n\nLa planification transport longue distance, la facturation client et le remplacement des automates de convoyage restent hors périmètre.\n\n## 4.3 Interfaces principales\n\nSystème tiers: ERP finance; Échange: Ordres et valorisation; Protocole: API + Kafka; Volumétrie: 96 k/j\n\nSystème tiers: Transporteurs; Échange: Étiquettes et statuts; Protocole: API REST; Volumétrie: 128 k/j\n\nSystème tiers: Convoyeurs; Échange: Missions automates; Protocole: MQTT; Volumétrie: 2,8 M/j\n\nSystème tiers: Portail client; Échange: Stocks et suivi; Protocole: API REST; Volumétrie: 410 k/j",
+      "source_index": 3
+    },
+    {
+      "citation_id": "rfp-897",
+      "chunk_id": 897,
+      "document_id": 4,
+      "document_name": "01_Helvia_Assurances_Refonte_Sinistres_Bilan_Projet.pdf",
+      "page": 7,
+      "content": "## 4.2 Périmètre exclu\n\nSont restés hors périmètre : le progiciel comptable et le grand livre, la refonte du CRM commercial, la souscription et la tarification des contrats, les modèles actuariels de provisionnement, l'archivage froid antérieur à 2021 et le portail des courtiers, traité dans un programme distinct.\n\n## 4.3 Interfaces conservées\n\nSystème tiers: Référentiel contrats; Nature de l'échange: Consultation garanties et plafonds; Protocole cible: API REST synchrone; Volumétrie quotidienne: 210 000 appels\n\nSystème tiers: Comptabilité générale; Nature de l'échange: Ordres de paiement et rapprochement; Protocole cible: Événement Kafka + fichier de contrôle; Volumétrie quotidienne: 9 400 écritures\n\nSystème tiers: Cabinets d'expertise; Nature de l'échange: Missionnement et retour de rapport; Protocole cible: API REST + notification; Volumétrie quotidienne: 1 850 missions",
+      "source_index": 4
+    },
+    {
+      "citation_id": "rfp-1072",
+      "chunk_id": 1072,
+      "document_id": 7,
+      "document_name": "04_Volteris_Energies_Socle_IoT_Telereleve_Dossier_Projet.pdf",
+      "page": 10,
+      "content": "Phase: P4 -Calcul et exposition; Période: Avril -Août 2025; Durée: 17 sem.; Contenu principal: Reconstitution des index, agrégats, API, alimentation de la facturation, portail exploitant; Livrables: API publiée, portail livré\n\nPhase: P5 -Migration du parc; Période: Juin -Nov. 2025; Durée: 22 sem.; Contenu principal: Bascule des 1,14 million de compteurs par lots, double collecte contrôlée, décommissionnement progressif; Livrables: Parc migré, chaînes héritées arrêtées\n\nPhase: P6 -Clôture et transfert; Période: Nov. -Déc. 2025; Durée: 6 sem.; Contenu principal: Tests de charge finaux, exercice de bascule régionale, documentation, formation de l'exploitation; Livrables: Dossier d'exploitation, bilan de projet\n\n## 6.1 Migration du parc\n\nLa bascule a été conduite par lots de 25 000 à 60 000 compteurs, groupés par concentrateur et par commune.",
+      "source_index": 5
+    }
+  ],
+  "similarMissions": [],
+  "evidenceValidationPassed": true,
+  "quality": {
+    "passed": true,
+    "score": 1.0,
+    "coverage_score": 1.0,
+    "citation_integrity": 1.0,
+    "section_count": 19,
+    "warnings": []
+  },
+  "diagnostic": null
+}

@@ -1,0 +1,6 @@
+{
+  "status": 502,
+  "error": "IA service error",
+  "message": "IA service call failed: /rfp — I/O error on POST request for \"http://service-ia:8000/rfp\": null",
+  "timestamp": "2026-08-17T22:41:35.471053587Z"
+}

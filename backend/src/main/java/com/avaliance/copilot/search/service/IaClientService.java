@@ -20,6 +20,7 @@ import reactor.core.publisher.Flux;
 
 import java.util.Map;
 import java.util.Objects;
+import java.util.UUID;
 
 /**
  * HTTP client for calling the internal FastAPI IA service.
@@ -70,6 +71,26 @@ public class IaClientService {
         return callPost("/rfp", request);
     }
 
+    @SuppressWarnings("unchecked")
+    public Map<String, Object> createRfpJob(Map<String, Object> request, Long ownerId, String role) {
+        return callPostWithOwner("/rfp/jobs", request, ownerId, role);
+    }
+
+    @SuppressWarnings("unchecked")
+    public Map<String, Object> getRfpJob(UUID jobId, Long ownerId, String role) {
+        return callGetWithOwner("/rfp/jobs/" + jobId, ownerId, role);
+    }
+
+    @SuppressWarnings("unchecked")
+    public Map<String, Object> getRfpJobResult(UUID jobId, Long ownerId, String role) {
+        return callGetWithOwner("/rfp/jobs/" + jobId + "/result", ownerId, role);
+    }
+
+    @SuppressWarnings("unchecked")
+    public Map<String, Object> cancelRfpJob(UUID jobId, Long ownerId, String role) {
+        return callPostWithOwner("/rfp/jobs/" + jobId + "/cancel", Map.of(), ownerId, role);
+    }
+
     public Flux<ServerSentEvent<String>> generateStream(Map<String, Object> request, Runnable onUpstreamConnected) {
         if (iaServiceProperties.isStubEnabled()) {
             onUpstreamConnected.run();
@@ -86,11 +107,18 @@ public class IaClientService {
         }
 
         log.debug("Calling IA service: POST /generate/stream (SSE)");
-        return iaWebClient.post()
+        String requestId = org.slf4j.MDC.get(com.avaliance.copilot.config.RequestIdFilter.REQUEST_ID_MDC_KEY);
+        if (requestId == null && request != null) {
+            requestId = (String) request.get("request_id");
+        }
+        var reqSpec = iaWebClient.post()
                 .uri("/generate/stream")
                 .contentType(MediaType.APPLICATION_JSON)
-                .accept(MediaType.TEXT_EVENT_STREAM)
-                .bodyValue(request)
+                .accept(MediaType.TEXT_EVENT_STREAM);
+        if (requestId != null && !requestId.isBlank()) {
+            reqSpec.header(com.avaliance.copilot.config.RequestIdFilter.REQUEST_ID_HEADER, requestId);
+        }
+        return reqSpec.bodyValue(request)
                 .exchangeToFlux(response -> {
                     if (response.statusCode().isError()) {
                         return response.bodyToMono(String.class)
@@ -154,12 +182,49 @@ public class IaClientService {
     @SuppressWarnings("unchecked")
     private Map<String, Object> callPost(String path, Map<String, Object> request) {
         try {
-            log.debug("Calling IA service: POST {}", path);
-            return iaRestClient.post()
-                    .uri(path)
-                    .body(request)
-                    .retrieve()
-                    .body(Map.class);
+            String requestId = org.slf4j.MDC.get(com.avaliance.copilot.config.RequestIdFilter.REQUEST_ID_MDC_KEY);
+            if (requestId == null && request != null) {
+                requestId = (String) request.get("request_id");
+            }
+            log.debug("Calling IA service: POST {} (requestId={})", path, requestId);
+            var reqSpec = iaRestClient.post().uri(path).body(request);
+            if (requestId != null && !requestId.isBlank()) {
+                reqSpec.header(com.avaliance.copilot.config.RequestIdFilter.REQUEST_ID_HEADER, requestId);
+            }
+            return reqSpec.retrieve().body(Map.class);
+        } catch (RestClientException e) {
+            throw handleException("IA service call failed: " + path, e);
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private Map<String, Object> callPostWithOwner(String path, Map<String, Object> request, Long ownerId, String role) {
+        try {
+            String requestId = org.slf4j.MDC.get(com.avaliance.copilot.config.RequestIdFilter.REQUEST_ID_MDC_KEY);
+            if (requestId == null && request != null) {
+                requestId = (String) request.get("request_id");
+            }
+            var reqSpec = iaRestClient.post().uri(path).header("X-Rfp-Owner-Id", ownerId.toString())
+                    .header("X-Rfp-Owner-Role", role).body(request);
+            if (requestId != null && !requestId.isBlank()) {
+                reqSpec.header(com.avaliance.copilot.config.RequestIdFilter.REQUEST_ID_HEADER, requestId);
+            }
+            return reqSpec.retrieve().body(Map.class);
+        } catch (RestClientException e) {
+            throw handleException("IA service call failed: " + path, e);
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private Map<String, Object> callGetWithOwner(String path, Long ownerId, String role) {
+        try {
+            String requestId = org.slf4j.MDC.get(com.avaliance.copilot.config.RequestIdFilter.REQUEST_ID_MDC_KEY);
+            var reqSpec = iaRestClient.get().uri(path).header("X-Rfp-Owner-Id", ownerId.toString())
+                    .header("X-Rfp-Owner-Role", role);
+            if (requestId != null && !requestId.isBlank()) {
+                reqSpec.header(com.avaliance.copilot.config.RequestIdFilter.REQUEST_ID_HEADER, requestId);
+            }
+            return reqSpec.retrieve().body(Map.class);
         } catch (RestClientException e) {
             throw handleException("IA service call failed: " + path, e);
         }
@@ -172,7 +237,7 @@ public class IaClientService {
         if (error instanceof org.springframework.web.client.RestClientResponseException responseException) {
             int statusCode = responseException.getStatusCode().value();
             String responseBody = responseException.getResponseBodyAsString();
-            log.error("{} — HTTP status {}: {}", prefix, statusCode, responseBody);
+            log.error("{} — HTTP status {}: {}", prefix, statusCode, responseBody, responseException);
             if (statusCode == 422) {
                 String detail = responseBody;
                 try {
@@ -180,20 +245,28 @@ public class IaClientService {
                     if (root.has("detail")) {
                         detail = root.get("detail").asText();
                     }
-                } catch (Exception ignored) {}
+                } catch (Exception ignored) {
+                    log.debug("Unable to parse IA validation response body", ignored);
+                }
                 throw new IaValidationException(detail.isBlank() ? "Le brief fourni ne contient aucun besoin exploitable pour construire une proposition." : detail);
             }
             if (statusCode == 400) {
                 throw new IllegalArgumentException(responseBody.isBlank() ? "Requête invalide ou brief non exploitable" : responseBody);
             }
+            if (statusCode == 503) {
+                return new IaServiceUnavailableException(
+                        prefix + " — " + (responseBody.isBlank() ? "LLM generation service is temporarily unavailable" : responseBody),
+                        error
+                );
+            }
         }
         String message = error.getMessage() != null ? error.getMessage() : error.getClass().getSimpleName();
         String lowered = message.toLowerCase();
         if (lowered.contains("timeout") || lowered.contains("timed out") || lowered.contains("connection refused")) {
-            log.error("{} — Unavailable (timeout/offline): {}", prefix, message);
+            log.error("{} — Unavailable (timeout/offline): {}", prefix, message, error);
             return new IaServiceUnavailableException(prefix + " — " + message, error);
         }
-        log.error("{} — Error: {}", prefix, message);
+        log.error("{} — Error: {}", prefix, message, error);
         return new IaServiceException(prefix + " — " + message, error);
     }
 }

@@ -115,6 +115,10 @@ public class GlobalExceptionHandler {
         body.put("status", status.value());
         body.put("error", error);
         body.put("message", message);
+        String requestId = org.slf4j.MDC.get(RequestIdFilter.REQUEST_ID_MDC_KEY);
+        if (requestId != null && !requestId.isBlank()) {
+            body.put("requestId", requestId);
+        }
         body.put("timestamp", Instant.now().toString());
         return ResponseEntity.status(status).body(body);
     }

@@ -13,6 +13,10 @@ class Settings(BaseSettings):
     ollama_url: str = Field(default="http://ollama:11434")
     llm_model: str = Field(min_length=1)
     ollama_timeout_seconds: float = Field(default=180.0, gt=0)
+    ollama_retry_attempts: int = Field(default=2, ge=1, le=3)
+    ollama_retry_backoff_seconds: float = Field(default=0.5, ge=0.0, le=10.0)
+    ollama_warmup_timeout_seconds: float = Field(default=120.0, gt=0)
+    rfp_sync_timeout_seconds: float = Field(default=180.0, gt=0)
     ollama_num_ctx: int = Field(default=8192, ge=512, le=32768)
     generation_max_tokens: int = Field(default=1500, ge=32, le=2048)
     generation_max_context_chunks: int = Field(default=20, ge=1, le=30)
@@ -33,6 +37,15 @@ class Settings(BaseSettings):
     retrieval_evidence_rank_safeguard: int = Field(default=10, ge=0, le=100)
     retrieval_min_final_chunks: int = Field(default=10, ge=1, le=30)
     retrieval_max_final_chunks: int = Field(default=15, ge=1, le=30)
+    rfp_worker_concurrency: int = Field(default=1, ge=1, le=4)
+    rfp_worker_poll_seconds: float = Field(default=1.0, ge=0.1, le=30.0)
+    rfp_worker_shutdown_seconds: float = Field(default=15.0, ge=1.0, le=120.0)
+    rfp_job_lease_seconds: int = Field(default=120, ge=30, le=3600)
+    rfp_job_renew_seconds: float = Field(default=30.0, ge=5.0, le=600.0)
+    rfp_job_max_attempts: int = Field(default=3, ge=1, le=10)
+    rfp_job_retry_backoff_seconds: int = Field(default=30, ge=1, le=3600)
+    rfp_job_retention_days: int = Field(default=7, ge=1, le=90)
+    rfp_job_cleanup_seconds: float = Field(default=3600.0, ge=60.0, le=86400.0)
 
 
 @lru_cache

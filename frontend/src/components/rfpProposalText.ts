@@ -1,8 +1,6 @@
 import type { RfpProposal } from '../types.ts'
 
 export function proposalToText(proposal: RfpProposal): string {
-  if (proposal.legacyMarkdown) return proposal.legacyMarkdown
-
   const lines: string[] = [proposal.title]
 
   if (proposal.executiveSummary) {
@@ -20,6 +18,9 @@ export function proposalToText(proposal: RfpProposal): string {
     if (section.summary) {
       lines.push(section.summary)
     }
+    if (section.body) {
+      lines.push(section.body)
+    }
 
     if (section.narrative && section.narrative.length > 0) {
       lines.push(...section.narrative)
@@ -30,7 +31,7 @@ export function proposalToText(proposal: RfpProposal): string {
     }
 
     if (section.bullets && section.bullets.length > 0) {
-      lines.push(...section.bullets.map((b) => `- ${b}`))
+      lines.push(...section.bullets.map((b) => `- ${b.text}${b.anchor?.id ? ` [${b.anchor.id}]` : ''}`))
     }
 
     if (section.verifiedReferences.length > 0) {

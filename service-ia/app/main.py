@@ -12,7 +12,7 @@ import secrets
 from contextlib import asynccontextmanager
 from typing import Annotated, AsyncIterator
 
-from fastapi import Depends, FastAPI, File, Form, Header, HTTPException, UploadFile, status
+from fastapi import Depends, FastAPI, File, Form, Header, HTTPException, Response, UploadFile, status
 from fastapi.responses import StreamingResponse
 
 from .schemas import (
@@ -63,8 +63,30 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         except Exception:
             logger.warning("Embedding model load failed. /embed and /ingest will not work.")
 
+        # Warm the configured LLM before this instance accepts RFP traffic. A
+        # failed warm-up is retained as readiness state and returned as HTTP 503.
+        from .generation.ollama import OllamaUnavailableError, warm_up_configured_model
+        app.state.ollama_warmed = False
+        try:
+            warm_up_configured_model(resolved_settings)
+            app.state.ollama_warmed = True
+        except OllamaUnavailableError:
+            logger.exception("Ollama warm-up failed; /ready and RFP generation remain unavailable")
+
+        # Full RFP jobs are claimed by a process-lifetime PostgreSQL worker, so
+        # queued and expired-lease jobs are recoverable after a restart.
+        worker = None
+        if db.is_initialized():
+            from .generation.rfp_job_worker import RfpJobWorker
+            from .generation.service import generate_rfp_structure
+            worker = RfpJobWorker(resolved_settings, generate_rfp_structure)
+            worker.start()
+            app.state.rfp_job_worker = worker
+
         yield
 
+        if worker is not None:
+            worker.stop()
         # Shutdown
         db.close_pool()
         logger.info("service-ia shutdown complete.")
@@ -112,6 +134,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 status_code=503,
                 detail=f"Configured Ollama model unavailable: {resolved_settings.llm_model}",
             )
+        if not getattr(app.state, "ollama_warmed", False):
+            raise HTTPException(status_code=503, detail=f"Configured Ollama model is not warmed: {resolved_settings.llm_model}")
         return {
             "status": "ready",
             "service": "service-ia",
@@ -283,47 +307,88 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         )
 
     # -----------------------------------------------------------------------
-    # /rfp — isolated PDF-evidence-first proposal workflow; synthetic missions are optional and labelled.
+    # /rfp — PDF-only proposal workflow. Full proposals are durable jobs.
     # -----------------------------------------------------------------------
-    @app.post("/rfp", dependencies=[Depends(require_internal_token)], response_model=RfpResponse)
-    def rfp(request: RfpRequest) -> RfpResponse:
-        from .generation.rfp_proposal import (
-            RfpGenerationError,
-            RfpInfrastructureError,
-            RfpInputError,
-            RfpValidationError,
-        )
-        from .generation.service import generate_rfp_structure
+    def rfp_owner(
+        owner_id: Annotated[int | None, Header(alias="X-Rfp-Owner-Id")] = None,
+    ) -> int:
+        if owner_id is None or owner_id <= 0:
+            raise HTTPException(status_code=400, detail="RFP owner identity is required")
+        return owner_id
 
-        logger.info(
-            "RFP request received request_id=%s description_length=%s sector=%r mission_type=%r",
-            request.request_id,
-            len(request.description),
-            request.sector,
-            request.mission_type,
-        )
+    def rfp_admin(
+        role: Annotated[str | None, Header(alias="X-Rfp-Owner-Role")] = None,
+    ) -> bool:
+        return role == "ADMIN"
+
+    @app.post("/rfp", dependencies=[Depends(require_internal_token)], response_model=RfpResponse)
+    def rfp(
+        request: RfpRequest,
+        response: Response,
+        x_request_id: Annotated[str | None, Header(alias="X-Request-Id")] = None,
+    ) -> RfpResponse:
+        if request.mode == "full":
+            raise HTTPException(status_code=422, detail="Full mode must use /rfp/jobs")
+        request.request_id = request.request_id or x_request_id or secrets.token_urlsafe(16)
+        response.headers["X-Request-Id"] = request.request_id
+        from .generation.ollama import OllamaUnavailableError
+        from .generation.rfp_proposal import RfpGenerationError, RfpInfrastructureError, RfpInputError, RfpValidationError
+        from .generation.service import generate_rfp_structure
         try:
-            response = generate_rfp_structure(request, resolved_settings)
+            return generate_rfp_structure(request, resolved_settings)
         except RfpInputError as exc:
-            logger.warning("RFP generation invalid input request_id=%s reason=%s", request.request_id, exc)
             raise HTTPException(status_code=422, detail=str(exc)) from exc
+        except OllamaUnavailableError as exc:
+            logger.exception("Ollama unavailable during RFP generation requestId=%s", request.request_id)
+            raise HTTPException(status_code=503, detail="LLM generation service is temporarily unavailable; retry shortly") from exc
         except RfpValidationError as exc:
-            logger.warning("RFP generation validation failed request_id=%s reason=%s", request.request_id, exc)
+            logger.exception("RFP validation failed requestId=%s", request.request_id)
             raise HTTPException(status_code=502, detail=str(exc)) from exc
         except (RfpInfrastructureError, RfpGenerationError) as exc:
-            logger.warning("RFP generation unavailable request_id=%s reason=%s", request.request_id, exc)
+            logger.exception("RFP generation dependency failed requestId=%s", request.request_id)
             raise HTTPException(status_code=503, detail=str(exc)) from exc
         except ValueError as exc:
-            logger.warning("RFP generation rejected request_id=%s reason=%s", request.request_id, exc)
             raise HTTPException(status_code=422, detail=str(exc)) from exc
-        logger.info(
-            "RFP response completed request_id=%s sections=%s citations=%s diagnostic=%s",
-            response.request_id,
-            len(response.proposal.sections),
-            len(response.citations),
-            response.diagnostic,
-        )
-        return response
+        except Exception as exc:
+            logger.exception("Unhandled RFP generation error requestId=%s", request.request_id)
+            raise HTTPException(status_code=500, detail="RFP generation failed; consult service logs with the request ID") from exc
+
+    @app.post("/rfp/jobs", status_code=status.HTTP_202_ACCEPTED, dependencies=[Depends(require_internal_token)])
+    def create_rfp_job(request: RfpRequest, owner_id: int = Depends(rfp_owner)) -> dict[str, object]:
+        if request.mode != "full":
+            raise HTTPException(status_code=422, detail="Only full mode may create an RFP job")
+        from . import db
+        from .generation import rfp_jobs
+        if not db.is_initialized():
+            raise HTTPException(status_code=503, detail="RFP job store is unavailable")
+        request.request_id = request.request_id or secrets.token_urlsafe(16)
+        return rfp_jobs.create_job(owner_id, request.model_dump(mode="json"))
+
+    @app.get("/rfp/jobs/{job_id}", dependencies=[Depends(require_internal_token)])
+    def get_rfp_job(job_id: str, owner_id: int = Depends(rfp_owner), is_admin: bool = Depends(rfp_admin)) -> dict[str, object]:
+        from .generation import rfp_jobs
+        job = rfp_jobs.get_job(job_id, owner_id, is_admin)
+        if job is None:
+            raise HTTPException(status_code=404, detail="RFP job not found")
+        return {key: job.get(key) for key in ("id", "status", "progress_step", "request_payload_json", "error_code", "error_message_safe", "created_at", "started_at", "finished_at", "cancel_requested_at", "cancelled_at", "attempt_count")}
+
+    @app.get("/rfp/jobs/{job_id}/result", dependencies=[Depends(require_internal_token)])
+    def get_rfp_job_result(job_id: str, owner_id: int = Depends(rfp_owner), is_admin: bool = Depends(rfp_admin)) -> dict[str, object]:
+        from .generation import rfp_jobs
+        job = rfp_jobs.get_job(job_id, owner_id, is_admin)
+        if job is None:
+            raise HTTPException(status_code=404, detail="RFP job not found")
+        if job["status"] != "completed":
+            raise HTTPException(status_code=409, detail=f"RFP job is {job['status']}")
+        return job["result_json"]
+
+    @app.post("/rfp/jobs/{job_id}/cancel", dependencies=[Depends(require_internal_token)])
+    def cancel_rfp_job(job_id: str, owner_id: int = Depends(rfp_owner), is_admin: bool = Depends(rfp_admin)) -> dict[str, object]:
+        from .generation import rfp_jobs
+        job = rfp_jobs.cancel_job(job_id, owner_id, is_admin)
+        if job is None:
+            raise HTTPException(status_code=404, detail="RFP job not found")
+        return {"id": job["id"], "status": job["status"], "cancel_requested_at": job["cancel_requested_at"]}
 
     return app
 

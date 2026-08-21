@@ -1,9 +1,11 @@
-import type { ApiErrorBody, AuthSession, DashboardSummary, Mission, MissionPage, RegisterUserRequest, RfpResponse, SearchRequest, SearchResponse, SourceDocument, SourceDocumentPage, UserAccount } from '../types.ts'
+import type { ApiErrorBody, AuthSession, DashboardSummary, Mission, MissionPage, RegisterUserRequest, RfpJob, RfpResponse, SearchRequest, SearchResponse, SourceDocument, SourceDocumentPage, UserAccount } from '../types.ts'
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? '/api'
 const SESSION_KEY = 'avaliance-copilot-session'
 const AUTH_REQUEST_TIMEOUT_MS = 15_000
-const RFP_REQUEST_TIMEOUT_MS = 600_000
+// The synchronous RFP pipeline has a 180 s server budget (including a possible
+// cold-model Call A); retain margin for reverse-proxy and response serialization.
+const RFP_REQUEST_TIMEOUT_MS = 330_000
 
 export class ApiError extends Error {
   readonly status: number
@@ -30,10 +32,7 @@ function parseRfpResponse(value: unknown): RfpResponse {
   const proposal = asRecord(root?.proposal)
   const sections = Array.isArray(proposal?.sections) ? proposal.sections : null
   const requestId = root?.requestId ?? root?.request_id
-  const legacyStructure = root && typeof (root.rfpStructure ?? root.rfp_structure) === 'string'
-    ? (root.rfpStructure ?? root.rfp_structure) as string
-    : null
-  if (!root || typeof requestId !== 'string' || !requestId || (!proposal || !sections) && !legacyStructure) {
+  if (!root || typeof requestId !== 'string' || !requestId || !proposal || !sections) {
     throw new ApiError('La réponse de proposition est invalide ou incomplète. Réessayez.', 502)
   }
   const safeSections = sections ?? []
@@ -100,11 +99,13 @@ function parseRfpResponse(value: unknown): RfpResponse {
 
   return {
     requestId: typeof requestId === 'string' ? requestId : undefined,
+    mode: typeof root.mode === 'string' ? (root.mode as 'full' | 'standard' | 'brief') : 'standard',
+    status: typeof root.status === 'string' ? (root.status as 'completed' | 'failed' | 'pending') : 'completed',
     requirements: (asRecord(root.requirements) ?? {}) as unknown as RfpResponse['requirements'],
     proposal: {
       title: typeof proposal?.title === 'string' ? proposal.title : 'Proposition de réponse',
       executiveSummary: typeof (proposal?.executiveSummary ?? proposal?.executive_summary) === 'string' ? ((proposal?.executiveSummary ?? proposal?.executive_summary) as string) : undefined,
-      legacyMarkdown: legacyStructure ?? undefined,
+      legacyMarkdown: undefined,
       sections: safeSections.map((value, index) => {
         const section = asRecord(value)
         if (!section || typeof section.title !== 'string') {
@@ -139,9 +140,22 @@ function parseRfpResponse(value: unknown): RfpResponse {
           status: (section.status as any) || 'complete',
           statusReason: typeof (section.statusReason ?? section.status_reason) === 'string' ? ((section.statusReason ?? section.status_reason) as string) : undefined,
           summary: typeof section.summary === 'string' ? section.summary : undefined,
+          body: typeof section.body === 'string' ? section.body : undefined,
           narrative: strings(section.narrative),
           claims: parsedClaims,
-          bullets: strings(section.bullets),
+          bullets: Array.isArray(section.bullets) ? section.bullets.flatMap(b => {
+             if (typeof b === 'string') return [{ text: b }]
+             const obj = asRecord(b)
+             if (!obj || typeof obj.text !== 'string') return []
+             const anchor = asRecord(obj.anchor)
+             return [{
+               text: obj.text,
+               anchor: anchor ? {
+                 type: (anchor.type as any) || 'fact',
+                 id: typeof anchor.id === 'string' ? anchor.id : undefined
+               } : undefined
+             }]
+          }) : [],
           questions: strings(section.questions),
           factsFromBrief: strings(section.factsFromBrief ?? section.facts_from_brief),
           verifiedReferences: (Array.isArray(section.verifiedReferences ?? section.verified_references)
@@ -164,7 +178,9 @@ function parseRfpResponse(value: unknown): RfpResponse {
               : []
           }),
           recommendations: strings(section.recommendations),
+          assumptions: strings(section.assumptions),
           assumptionsToConfirm: strings(section.assumptionsToConfirm ?? section.assumptions_to_confirm),
+          evidence: Array.isArray(section.evidence) ? section.evidence.map(e => asRecord(e) as any) : [],
           tables: tables.flatMap((item) => {
             const table = asRecord(item)
             const rows: unknown[] = Array.isArray(table?.rows) ? table.rows : []
@@ -244,6 +260,9 @@ async function request<T>(path: string, init?: RequestInit, timeoutMs?: number):
   if (init?.body && !(init.body instanceof FormData)) headers.set('Content-Type', 'application/json')
   if (session) headers.set('Authorization', `Bearer ${session.token}`)
 
+  const requestId = headers.get('X-Request-Id') ?? headers.get('X-Request-ID') ?? crypto.randomUUID()
+  headers.set('X-Request-Id', requestId)
+
   const timeoutController = timeoutMs === undefined ? undefined : new AbortController()
   const timeoutId = timeoutController === undefined ? undefined : window.setTimeout(() => timeoutController.abort(), timeoutMs)
   const signal = timeoutController === undefined
@@ -259,27 +278,30 @@ async function request<T>(path: string, init?: RequestInit, timeoutMs?: number):
       window.dispatchEvent(new Event('avaliance:session-expired'))
     }
     if (!response.ok) {
-      const body = await response.json().catch(() => ({})) as ApiErrorBody
-      const fallback = response.status === 401
-        ? 'Identifiant ou mot de passe incorrect.'
-        : response.status === 403
-          ? 'Accès refusé. Vérifiez l’adresse du frontend et les origines CORS autorisées.'
-          : `Le service a retourné une erreur HTTP ${response.status}.`
-      throw new ApiError(body.message ?? body.error ?? fallback, response.status)
+      const respRequestId = response.headers.get('X-Request-Id') ?? response.headers.get('X-Request-ID') ?? requestId
+      const body = await response.json().catch(() => ({})) as ApiErrorBody & { detail?: string }
+      const errorDetail = body.message ?? body.error ?? body.detail ?? (
+        response.status === 401 ? 'Identifiant ou mot de passe incorrect.' :
+        response.status === 403 ? 'Accès refusé. Vérifiez l’adresse du frontend et les origines CORS autorisées.' :
+        response.status === 504 ? 'Délai d’attente Nginx/Passerelle dépassé (HTTP 504).' :
+        response.status === 503 ? 'Service IA temporairement indisponible (HTTP 503).' :
+        response.status === 502 ? 'Erreur de communication avec le service IA (HTTP 502 Bad Gateway).' :
+        `Le service a retourné une erreur HTTP ${response.status}.`
+      )
+      throw new ApiError(`${errorDetail} [Request ID: ${respRequestId}]`, response.status)
     }
     if (response.status === 204) return undefined as T
     return await response.json() as T
   } catch (error) {
     if (timeoutController?.signal.aborted) {
-      throw new ApiError('Erreur de connexion : le serveur est injoignable ou la demande a expiré. Réessayez.', 0)
+      throw new ApiError(`Erreur de connexion : le délai maximal (${timeoutMs ? timeoutMs / 1000 : 0}s) a expiré [Request ID: ${requestId}].`, 0)
     }
     if (error instanceof ApiError) throw error
     if (error instanceof DOMException && error.name === 'AbortError') {
-      throw new ApiError('Erreur de connexion : la demande a été annulée.', 0)
+      throw new ApiError(`Erreur de connexion : la requête a été interrompue (browser AbortError) [Request ID: ${requestId}].`, 0)
     }
-    // Browsers intentionally hide CORS details from fetch; a TypeError therefore
-    // represents the same actionable condition as a refused network connection.
-    throw new ApiError('Erreur de connexion : le serveur est injoignable. Vérifiez que la plateforme est démarrée et que l’origine du frontend est autorisée.', 0)
+    const cause = error instanceof Error ? error.message : String(error)
+    throw new ApiError(`Erreur de connexion : échec de communication (${cause}) [Request ID: ${requestId}].`, 0)
   } finally {
     if (timeoutId !== undefined) window.clearTimeout(timeoutId)
   }
@@ -311,13 +333,21 @@ export const api = {
   search: (payload: SearchRequest) => request<SearchResponse>('/search', {
     method: 'POST', body: JSON.stringify(payload),
   }),
-  generateRfp: async (payload: { description: string; sector?: string; missionType?: string; topK?: number }) => {
+  generateRfp: async (payload: { description: string; mode?: string; sector?: string; requestId?: string }) => {
+    const requestId = payload.requestId ?? crypto.randomUUID()
     const response = await request<unknown>('/rfp/generate', {
       method: 'POST',
-      body: JSON.stringify({ description: payload.description, sector: payload.sector, missionType: payload.missionType, topK: payload.topK }),
+      headers: { 'X-Request-Id': requestId },
+      body: JSON.stringify({ requestId, description: payload.description, mode: payload.mode || 'standard', sector: payload.sector }),
     }, RFP_REQUEST_TIMEOUT_MS)
     return parseRfpResponse(response)
   },
+  createRfpJob: (payload: { description: string; sector?: string }) => request<{ jobId: string; status: RfpJob['status']; requestId: string }>('/rfp/jobs', {
+    method: 'POST', body: JSON.stringify({ description: payload.description, mode: 'full', sector: payload.sector }),
+  }, AUTH_REQUEST_TIMEOUT_MS),
+  rfpJob: (jobId: string) => request<RfpJob>(`/rfp/jobs/${jobId}`),
+  rfpJobResult: async (jobId: string) => parseRfpResponse(await request<unknown>(`/rfp/jobs/${jobId}/result`)),
+  cancelRfpJob: (jobId: string) => request<RfpJob>(`/rfp/jobs/${jobId}/cancel`, { method: 'POST' }),
   missions: (params: URLSearchParams) => request<MissionPage>(`/missions?${params.toString()}`),
   mission: (id: number) => request<Mission>(`/missions/${id}`),
   documents: (params: URLSearchParams) => request<SourceDocumentPage>(`/documents?${params.toString()}`),

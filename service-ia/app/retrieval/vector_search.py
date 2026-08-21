@@ -10,7 +10,7 @@ from functools import lru_cache
 
 from ..db import execute_query, is_initialized
 from ..embeddings import encode
-from ..schemas import RetrievedChunk, RetrieveRequest, RetrieveResponse
+from ..schemas import RetrievedChunk, RetrieveRequest, RetrieveResponse, RfpAtomicNeed, EvidencePacket, RfpSectionEvidence
 from ..settings import get_settings
 from .reranker import rerank
 
@@ -729,3 +729,84 @@ def vector_search(request: RetrieveRequest) -> RetrieveResponse:
     """Return chunks ranked by vector and full-text Reciprocal Rank Fusion."""
     response, _ = vector_search_with_trace(request)
     return response
+
+
+def retrieve_for_requirements(
+    needs: list[RfpAtomicNeed],
+    sector: str | None = None,
+    max_total_chunks: int | None = None,
+) -> list[EvidencePacket]:
+    """Retrieve two to three PDF chunks per requirement without starving later needs."""
+    packets = []
+    # Enough room for every requirement, with a bounded context budget.
+    context_cap = max_total_chunks or min(max(len(needs) * 3, 3), 36)
+    global_chunk_map: dict[tuple[int, int | None, int], str] = {}
+
+    def _fetch(need: RfpAtomicNeed) -> list[RetrievedChunk]:
+        query = need.text
+        if need.source_excerpt:
+            query += f" {need.source_excerpt}"
+        if sector:
+            # Sector appears in source-document titles for legacy PDFs, even
+            # where doc_chunk.sector was not populated during ingestion.
+            query += f" {sector}"
+        req = RetrieveRequest(
+            query=query,
+            top_k=3,
+            sector=sector,
+            corpus_scope="PDF"
+        )
+        return vector_search(req).chunks
+
+    with ThreadPoolExecutor(max_workers=3) as executor:
+        results = list(executor.map(_fetch, needs))
+
+    # PDF chunks inherit no sector in older ingestion batches.  For an explicitly
+    # scoped RFP, use the durable source filename as a conservative document-level
+    # sector signal when it yields candidates. This prevents an unrelated IoT or
+    # logistics case study from being presented as banking evidence merely because
+    # both happen to mention Kafka.
+    sector_terms = {
+        term for term in _fold_text(sector or "").split()
+        if len(term) >= 4
+    }
+    if sector_terms:
+        scoped_results: list[list[RetrievedChunk]] = []
+        for chunks in results:
+            matching = [
+                chunk for chunk in chunks
+                if any(term in _fold_text(chunk.document_name or "") for term in sector_terms)
+            ]
+            scoped_results.append(matching or chunks)
+        results = scoped_results
+
+    for need, chunks in zip(needs, results):
+        evidence_items = []
+        for c in chunks[:3]:
+            evidence_key = (c.document_id or 0, c.page, c.chunk_id)
+            if len(global_chunk_map) >= context_cap and evidence_key not in global_chunk_map:
+                # The cap is sized for all requirements; never replace an earlier packet silently.
+                continue
+            if evidence_key not in global_chunk_map:
+                global_chunk_map[evidence_key] = f"pdf-{len(global_chunk_map) + 1:03d}"
+            evidence_items.append(
+                RfpSectionEvidence(
+                    id=global_chunk_map[evidence_key],
+                    source_document_id=c.document_id or 0,
+                    document_name=c.document_name,
+                    page=c.page,
+                    chunk_id=c.chunk_id,
+                    quote=c.content[:1200],
+                )
+            )
+
+        status = "SUPPORTED" if evidence_items else "NO_RELEVANT_EVIDENCE"
+        packets.append(
+            EvidencePacket(
+                requirement_id=need.id,
+                status=status,
+                evidence=evidence_items
+            )
+        )
+
+    return packets

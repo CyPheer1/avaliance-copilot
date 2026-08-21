@@ -1521,7 +1521,7 @@ def _requirement_values(description: str, terms: tuple[str, ...]) -> list[str]:
 
 
 def _extract_rfp_requirements(description: str, sector: str | None) -> RfpRequirements:
-    from .rfp_proposal import _extract_rfp_requirements as _extract
+    from .rfp_proposal_legacy import _extract_rfp_requirements as _extract
 
     return _extract(description, sector)
 
@@ -1557,7 +1557,7 @@ def _brief_facts(requirements: RfpRequirements) -> list[str]:
 
 
 def _proposal_sections(requirements: RfpRequirements, citations: list[RfpCitation]) -> list[RfpSection]:
-    from .rfp_proposal import build_adaptive_proposal
+    from .rfp_proposal_legacy import build_adaptive_proposal
 
     return build_adaptive_proposal(requirements, citations)
 

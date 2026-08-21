@@ -1,0 +1,1084 @@
+{
+  "requestId": "68c87128-9936-4755-ad6e-53911300db8b",
+  "requirements": {
+    "sector": "sante",
+    "organization_type": null,
+    "business_problem": [
+      "Déployer un portail patient sécurisé HDS",
+      "Interopérabilité avec le Dossier Patient Informatisé (DPI) via des API REST et FHIR",
+      "Intégration de l'authentification ProSanté Connect"
+    ],
+    "project_type": [
+      "Déploiement de portail patient",
+      "Interopérabilité système",
+      "Authentification sécurisée"
+    ],
+    "technologies_and_constraints": [
+      "API REST",
+      "FHIR",
+      "ProSanté Connect"
+    ],
+    "security_and_compliance": [
+      "Sécurité du portail patient HDS",
+      "Interopérabilité conforme aux standards de santé"
+    ],
+    "expected_deliverables": [
+      "Portail patient sécurisé HDS",
+      "Interopérabilité avec le DPI via API REST et FHIR",
+      "Intégration de l'authentification ProSanté Connect"
+    ],
+    "scale": [],
+    "timeline_and_urgency": [],
+    "budget": null,
+    "criteria": [],
+    "dependencies": [],
+    "exclusions": [],
+    "assumptions": [],
+    "ambiguities_and_questions": [],
+    "atomic_needs": [
+      {
+        "id": "need-01",
+        "text": "Déployer un portail patient sécurisé HDS",
+        "category": "functional_requirement",
+        "source_excerpt": "Groupe hospitalier : déployer un portail patient sécurisé HDS",
+        "start_offset": 0,
+        "end_offset": 61
+      },
+      {
+        "id": "need-02",
+        "text": "Interopérabilité avec le Dossier Patient Informatisé (DPI) via des API REST et FHIR",
+        "category": "technical_integration",
+        "source_excerpt": "interopérable avec le Dossier Patient Informatisé (DPI) via des API REST et FHIR",
+        "start_offset": 63,
+        "end_offset": 143
+      },
+      {
+        "id": "need-03",
+        "text": "Intégration de l'authentification ProSanté Connect",
+        "category": "security_authentication",
+        "source_excerpt": "et intégrant l'authentification ProSanté Connect",
+        "start_offset": 145,
+        "end_offset": 193
+      }
+    ]
+  },
+  "proposal": {
+    "title": "Proposition de réponse — sante",
+    "executive_summary": "Cette proposition présente l'accompagnement d'Avaliance pour répondre aux enjeux de Déployer un portail patient sécurisé HDS.",
+    "sections": [
+      {
+        "key": "executive_summary",
+        "order": 1,
+        "title": "Synthèse exécutive",
+        "status": "complete",
+        "status_reason": null,
+        "summary": null,
+        "narrative": [
+          "Cette proposition présente l'accompagnement d'Avaliance pour répondre aux enjeux de Déployer un portail patient sécurisé HDS.",
+          "Notre dispositif associe expertise méthodologique, cadrage rigoureux et sécurisation des livrables."
+        ],
+        "claims": [
+          {
+            "id": "claim-001",
+            "text": "Déployer un portail patient sécurisé HDS",
+            "kind": "brief_fact",
+            "source_ids": [
+              "brief"
+            ],
+            "citation_indexes": [],
+            "confidence": 1.0
+          },
+          {
+            "id": "claim-002",
+            "text": "Engager un cadrage initial pour valider le périmètre et les jalons.",
+            "kind": "recommendation",
+            "source_ids": [],
+            "citation_indexes": [],
+            "confidence": 1.0
+          }
+        ],
+        "bullets": [],
+        "tables": [],
+        "questions": [],
+        "facts_from_brief": [
+          "Déployer un portail patient sécurisé HDS"
+        ],
+        "verified_references": [],
+        "recommendations": [
+          "Engager un cadrage initial pour valider le périmètre et les jalons."
+        ],
+        "assumptions_to_confirm": []
+      },
+      {
+        "key": "context_understanding",
+        "order": 2,
+        "title": "Compréhension du contexte",
+        "status": "complete",
+        "status_reason": null,
+        "summary": null,
+        "narrative": [
+          "Le contexte porte sur les besoins suivants : Déployer un portail patient sécurisé HDS, Interopérabilité avec le Dossier Patient Informatisé (DPI) via des API REST et FHIR, Intégration de l'authentification ProSanté Connect."
+        ],
+        "claims": [
+          {
+            "id": "claim-003",
+            "text": "Déployer un portail patient sécurisé HDS",
+            "kind": "brief_fact",
+            "source_ids": [
+              "brief"
+            ],
+            "citation_indexes": [],
+            "confidence": 1.0
+          },
+          {
+            "id": "claim-004",
+            "text": "Interopérabilité avec le Dossier Patient Informatisé (DPI) via des API REST et FHIR",
+            "kind": "brief_fact",
+            "source_ids": [
+              "brief"
+            ],
+            "citation_indexes": [],
+            "confidence": 1.0
+          },
+          {
+            "id": "claim-005",
+            "text": "Intégration de l'authentification ProSanté Connect",
+            "kind": "brief_fact",
+            "source_ids": [
+              "brief"
+            ],
+            "citation_indexes": [],
+            "confidence": 1.0
+          }
+        ],
+        "bullets": [],
+        "tables": [],
+        "questions": [],
+        "facts_from_brief": [
+          "Déployer un portail patient sécurisé HDS",
+          "Interopérabilité avec le Dossier Patient Informatisé (DPI) via des API REST et FHIR",
+          "Intégration de l'authentification ProSanté Connect"
+        ],
+        "verified_references": [],
+        "recommendations": [
+          "Le contexte porte sur les besoins suivants : Déployer un portail patient sécurisé HDS, Interopérabilité avec le Dossier Patient Informatisé (DPI) via des API REST et FHIR, Intégration de l'authentification ProSanté Connect."
+        ],
+        "assumptions_to_confirm": []
+      },
+      {
+        "key": "stakes_and_problem",
+        "order": 3,
+        "title": "Enjeux et problème à résoudre",
+        "status": "complete",
+        "status_reason": null,
+        "summary": null,
+        "narrative": [
+          "Les enjeux principaux identifiés nécessitent un traitement structuré et sans rupture d'activité."
+        ],
+        "claims": [
+          {
+            "id": "claim-006",
+            "text": "Déployer un portail patient sécurisé HDS",
+            "kind": "brief_fact",
+            "source_ids": [
+              "brief"
+            ],
+            "citation_indexes": [],
+            "confidence": 1.0
+          },
+          {
+            "id": "claim-007",
+            "text": "Interopérabilité avec le Dossier Patient Informatisé (DPI) via des API REST et FHIR",
+            "kind": "brief_fact",
+            "source_ids": [
+              "brief"
+            ],
+            "citation_indexes": [],
+            "confidence": 1.0
+          },
+          {
+            "id": "claim-008",
+            "text": "Intégration de l'authentification ProSanté Connect",
+            "kind": "brief_fact",
+            "source_ids": [
+              "brief"
+            ],
+            "citation_indexes": [],
+            "confidence": 1.0
+          }
+        ],
+        "bullets": [],
+        "tables": [],
+        "questions": [],
+        "facts_from_brief": [
+          "Déployer un portail patient sécurisé HDS",
+          "Interopérabilité avec le Dossier Patient Informatisé (DPI) via des API REST et FHIR",
+          "Intégration de l'authentification ProSanté Connect"
+        ],
+        "verified_references": [],
+        "recommendations": [
+          "Les enjeux principaux identifiés nécessitent un traitement structuré et sans rupture d'activité."
+        ],
+        "assumptions_to_confirm": []
+      },
+      {
+        "key": "objectives_and_outcomes",
+        "order": 4,
+        "title": "Objectifs et résultats attendus",
+        "status": "complete",
+        "status_reason": null,
+        "summary": null,
+        "narrative": [
+          "Les objectifs de la prestation sont déclinés en indicateurs observables et résultats vérifiables."
+        ],
+        "claims": [],
+        "bullets": [],
+        "tables": [
+          {
+            "title": "Objectifs et indicateurs de succès",
+            "columns": [
+              "Objectif",
+              "Indicateur de succès",
+              "Cible attendue"
+            ],
+            "rows": [
+              [
+                "Déployer un portail patient sécurisé HDS",
+                "Conformité aux spécifications validées",
+                "Validation conjointe en recette"
+              ],
+              [
+                "Interopérabilité avec le Dossier Patient Informatisé (DPI) via des API REST et FHIR",
+                "Conformité aux spécifications validées",
+                "Validation conjointe en recette"
+              ],
+              [
+                "Intégration de l'authentification ProSanté Connect",
+                "Conformité aux spécifications validées",
+                "Validation conjointe en recette"
+              ]
+            ]
+          }
+        ],
+        "questions": [],
+        "facts_from_brief": [],
+        "verified_references": [],
+        "recommendations": [
+          "Les objectifs de la prestation sont déclinés en indicateurs observables et résultats vérifiables."
+        ],
+        "assumptions_to_confirm": []
+      },
+      {
+        "key": "scope_inclusions",
+        "order": 5,
+        "title": "Périmètre inclus",
+        "status": "complete",
+        "status_reason": null,
+        "summary": null,
+        "narrative": [
+          "Le périmètre pris en charge comprend les chantiers suivants :"
+        ],
+        "claims": [],
+        "bullets": [
+          "Chantier : Déployer un portail patient sécurisé HDS",
+          "Chantier : Interopérabilité avec le Dossier Patient Informatisé (DPI) via des API REST et FHIR",
+          "Chantier : Intégration de l'authentification ProSanté Connect"
+        ],
+        "tables": [],
+        "questions": [],
+        "facts_from_brief": [],
+        "verified_references": [],
+        "recommendations": [
+          "Le périmètre pris en charge comprend les chantiers suivants :"
+        ],
+        "assumptions_to_confirm": []
+      },
+      {
+        "key": "scope_exclusions",
+        "order": 6,
+        "title": "Périmètre exclu",
+        "status": "complete",
+        "status_reason": null,
+        "summary": null,
+        "narrative": [
+          "Les prestations suivantes sont expressément exclues du périmètre de base :"
+        ],
+        "claims": [],
+        "bullets": [
+          "Acquisition de licences logicielles tierces ou matériels",
+          "Développements spécifiques hors périmètre convenu",
+          "Exploitation et maintien en conditions opérationnelles non prévus au contrat"
+        ],
+        "tables": [],
+        "questions": [],
+        "facts_from_brief": [],
+        "verified_references": [],
+        "recommendations": [
+          "Les prestations suivantes sont expressément exclues du périmètre de base :"
+        ],
+        "assumptions_to_confirm": []
+      },
+      {
+        "key": "functional_solution",
+        "order": 7,
+        "title": "Solution fonctionnelle proposée",
+        "status": "complete",
+        "status_reason": null,
+        "summary": null,
+        "narrative": [
+          "La solution fonctionnelle s'articule autour des cas d'usage métiers prioritaires.",
+          "Chaque fonction est conçue pour simplifier les parcours et assurer l'intégrité des opérations."
+        ],
+        "claims": [
+          {
+            "id": "claim-009",
+            "text": "Déployer un portail patient sécurisé HDS",
+            "kind": "recommendation",
+            "source_ids": [],
+            "citation_indexes": [],
+            "confidence": 1.0
+          },
+          {
+            "id": "claim-010",
+            "text": "Interopérabilité avec le Dossier Patient Informatisé (DPI) via des API REST et FHIR",
+            "kind": "recommendation",
+            "source_ids": [],
+            "citation_indexes": [],
+            "confidence": 1.0
+          },
+          {
+            "id": "claim-011",
+            "text": "Intégration de l'authentification ProSanté Connect",
+            "kind": "recommendation",
+            "source_ids": [],
+            "citation_indexes": [],
+            "confidence": 1.0
+          }
+        ],
+        "bullets": [],
+        "tables": [],
+        "questions": [],
+        "facts_from_brief": [],
+        "verified_references": [],
+        "recommendations": [
+          "Déployer un portail patient sécurisé HDS",
+          "Interopérabilité avec le Dossier Patient Informatisé (DPI) via des API REST et FHIR",
+          "Intégration de l'authentification ProSanté Connect"
+        ],
+        "assumptions_to_confirm": []
+      },
+      {
+        "key": "technical_architecture",
+        "order": 8,
+        "title": "Architecture technique cible",
+        "status": "complete",
+        "status_reason": null,
+        "summary": null,
+        "narrative": [
+          "L'architecture repose sur les composants identifiés : API REST, FHIR, ProSanté Connect."
+        ],
+        "claims": [],
+        "bullets": [],
+        "tables": [],
+        "questions": [],
+        "facts_from_brief": [],
+        "verified_references": [],
+        "recommendations": [
+          "L'architecture repose sur les composants identifiés : API REST, FHIR, ProSanté Connect."
+        ],
+        "assumptions_to_confirm": []
+      },
+      {
+        "key": "integrations_and_interfaces",
+        "order": 9,
+        "title": "Intégrations et interfaces",
+        "status": "complete",
+        "status_reason": null,
+        "summary": null,
+        "narrative": [
+          "Les intégrations avec le système d'information s'effectuent via des interfaces documentées et des API sécurisées."
+        ],
+        "claims": [],
+        "bullets": [],
+        "tables": [],
+        "questions": [],
+        "facts_from_brief": [],
+        "verified_references": [],
+        "recommendations": [
+          "Les intégrations avec le système d'information s'effectuent via des interfaces documentées et des API sécurisées."
+        ],
+        "assumptions_to_confirm": []
+      },
+      {
+        "key": "security_compliance_governance",
+        "order": 10,
+        "title": "Sécurité, conformité et gouvernance des données",
+        "status": "complete",
+        "status_reason": null,
+        "summary": null,
+        "narrative": [
+          "Les exigences de sécurité et de conformité (Sécurité du portail patient HDS, Interopérabilité conforme aux standards de santé) font l'objet d'un suivi dédié."
+        ],
+        "claims": [
+          {
+            "id": "claim-012",
+            "text": "Sécurité du portail patient HDS",
+            "kind": "brief_fact",
+            "source_ids": [
+              "brief"
+            ],
+            "citation_indexes": [],
+            "confidence": 1.0
+          },
+          {
+            "id": "claim-013",
+            "text": "Interopérabilité conforme aux standards de santé",
+            "kind": "brief_fact",
+            "source_ids": [
+              "brief"
+            ],
+            "citation_indexes": [],
+            "confidence": 1.0
+          }
+        ],
+        "bullets": [],
+        "tables": [],
+        "questions": [],
+        "facts_from_brief": [
+          "Sécurité du portail patient HDS",
+          "Interopérabilité conforme aux standards de santé"
+        ],
+        "verified_references": [],
+        "recommendations": [
+          "Les exigences de sécurité et de conformité (Sécurité du portail patient HDS, Interopérabilité conforme aux standards de santé) font l'objet d'un suivi dédié."
+        ],
+        "assumptions_to_confirm": []
+      },
+      {
+        "key": "methodology_phases_deliverables",
+        "order": 11,
+        "title": "Démarche, phases et livrables",
+        "status": "complete",
+        "status_reason": null,
+        "summary": null,
+        "narrative": [
+          "La démarche proposée est structurée en trois phases progressives et maîtrisées :"
+        ],
+        "claims": [],
+        "bullets": [],
+        "tables": [
+          {
+            "title": "Phases et livrables de la mission",
+            "columns": [
+              "Phase",
+              "Objectif",
+              "Livrable clé",
+              "Critère de sortie"
+            ],
+            "rows": [
+              [
+                "Phase 1 : Cadrage & Diagnostic",
+                "Valider les exigences et la cible",
+                "Dossier de cadrage",
+                "Validation conjointe"
+              ],
+              [
+                "Phase 2 : Conception & Réalisation",
+                "Construire et intégrer les composants",
+                "Dossier technique & Lot fonctionnel",
+                "Recette opérationnelle"
+              ],
+              [
+                "Phase 3 : Déploiement & Transfert",
+                "Mettre en production et former",
+                "PV de recette & Support",
+                "Autonomie des équipes"
+              ]
+            ]
+          }
+        ],
+        "questions": [],
+        "facts_from_brief": [],
+        "verified_references": [],
+        "recommendations": [
+          "La démarche proposée est structurée en trois phases progressives et maîtrisées :"
+        ],
+        "assumptions_to_confirm": []
+      },
+      {
+        "key": "planning_and_milestones",
+        "order": 12,
+        "title": "Planning et jalons",
+        "status": "complete",
+        "status_reason": null,
+        "summary": null,
+        "narrative": [
+          "Le planning prévisionnel est jalonné par des échéances relatives garantissant la visibilité opérationnelle."
+        ],
+        "claims": [],
+        "bullets": [],
+        "tables": [
+          {
+            "title": "Jalons directeurs",
+            "columns": [
+              "Jalon",
+              "Échéance relative",
+              "Objectif associé"
+            ],
+            "rows": [
+              [
+                "J1 — Lancement",
+                "Phase initiale (T0)",
+                "Validation du plan de travail"
+              ],
+              [
+                "J2 — Fin de cadrage",
+                "Fin de phase 1",
+                "Validation du dossier d'architecture"
+              ],
+              [
+                "J3 — Recette",
+                "Fin de phase 2",
+                "Validation des cas de tests"
+              ],
+              [
+                "J4 — Mise en service",
+                "Phase 3",
+                "Bascule en production"
+              ]
+            ]
+          }
+        ],
+        "questions": [],
+        "facts_from_brief": [],
+        "verified_references": [],
+        "recommendations": [
+          "Le planning prévisionnel est jalonné par des échéances relatives garantissant la visibilité opérationnelle."
+        ],
+        "assumptions_to_confirm": []
+      },
+      {
+        "key": "team_and_governance",
+        "order": 13,
+        "title": "Équipe, rôles et gouvernance",
+        "status": "complete",
+        "status_reason": null,
+        "summary": null,
+        "narrative": [
+          "Le dispositif s'appuie sur une gouvernance structurée adaptée au contexte du client."
+        ],
+        "claims": [],
+        "bullets": [],
+        "tables": [
+          {
+            "title": "Comitologie et gouvernance",
+            "columns": [
+              "Instance",
+              "Périodicité indicative",
+              "Participants",
+              "Rôle"
+            ],
+            "rows": [
+              [
+                "Comité de Pilotage",
+                "Selon calendrier convenu",
+                "Directeur de mission & Sponsors",
+                "Arbitrages et suivi stratégique"
+              ],
+              [
+                "Comité de Projet",
+                "Selon rythme opérationnel",
+                "Chef de projet & Équipe",
+                "Suivi opérationnel et risques"
+              ]
+            ]
+          }
+        ],
+        "questions": [],
+        "facts_from_brief": [],
+        "verified_references": [],
+        "recommendations": [
+          "Le dispositif s'appuie sur une gouvernance structurée adaptée au contexte du client."
+        ],
+        "assumptions_to_confirm": []
+      },
+      {
+        "key": "testing_and_acceptance",
+        "order": 14,
+        "title": "Stratégie de tests et recette",
+        "status": "complete",
+        "status_reason": null,
+        "summary": null,
+        "narrative": [
+          "La stratégie de recette repose sur une validation continue des exigences et la traçabilité des anomalies."
+        ],
+        "claims": [],
+        "bullets": [],
+        "tables": [],
+        "questions": [],
+        "facts_from_brief": [],
+        "verified_references": [],
+        "recommendations": [
+          "La stratégie de recette repose sur une validation continue des exigences et la traçabilité des anomalies."
+        ],
+        "assumptions_to_confirm": []
+      },
+      {
+        "key": "migration_deployment_reversibility",
+        "order": 15,
+        "title": "Migration, déploiement et réversibilité",
+        "status": "complete",
+        "status_reason": null,
+        "summary": null,
+        "narrative": [
+          "La bascule est planifiée avec une procédure de repli formalisée et des clauses de réversibilité complètes."
+        ],
+        "claims": [],
+        "bullets": [],
+        "tables": [],
+        "questions": [],
+        "facts_from_brief": [],
+        "verified_references": [],
+        "recommendations": [
+          "La bascule est planifiée avec une procédure de repli formalisée et des clauses de réversibilité complètes."
+        ],
+        "assumptions_to_confirm": []
+      },
+      {
+        "key": "change_management_training",
+        "order": 16,
+        "title": "Conduite du changement, formation et transfert",
+        "status": "complete",
+        "status_reason": null,
+        "summary": null,
+        "narrative": [
+          "Un plan d'accompagnement au changement et de transfert de compétences est déployé auprès des équipes."
+        ],
+        "claims": [],
+        "bullets": [],
+        "tables": [],
+        "questions": [],
+        "facts_from_brief": [],
+        "verified_references": [],
+        "recommendations": [
+          "Un plan d'accompagnement au changement et de transfert de compétences est déployé auprès des équipes."
+        ],
+        "assumptions_to_confirm": []
+      },
+      {
+        "key": "operations_and_support",
+        "order": 17,
+        "title": "Exploitation, support et maintenance",
+        "status": "complete",
+        "status_reason": null,
+        "summary": null,
+        "narrative": [
+          "Avaliance propose un modèle de maintien en conditions opérationnelles robuste, conçu pour assurer la pérennité et la fiabilité du portail patient HDS. Ce modèle intègre une supervision continue, un support technique réactif et une astreinte dédiée pour garantir la continuité des services. L'objectif est de maintenir une exploitation optimale, en alignement avec les attentes du groupe hospitalier et les normes de sécurité applicables.",
+          "Le support technique sera organisé autour d'une équipe dédiée, capable de gérer les incidents, les demandes d'assistance et les mises à jour logicielles. Une supervision proactive sera mise en place pour anticiper les risques et assurer la stabilité du système. L'astreinte sera déclenchée en cas de besoin, avec une réactivité adaptée aux urgences."
+        ],
+        "claims": [
+          {
+            "id": "claim-014",
+            "text": "Le portail patient HDS sera exploitable en conditions opérationnelles stables grâce à une supervision continue et un support technique réactif.",
+            "kind": "recommendation",
+            "source_ids": [],
+            "citation_indexes": [],
+            "confidence": 1.0
+          },
+          {
+            "id": "claim-015",
+            "text": "Une astreinte dédiée sera mise en place pour gérer les incidents critiques et assurer la continuité des services.",
+            "kind": "recommendation",
+            "source_ids": [],
+            "citation_indexes": [],
+            "confidence": 1.0
+          },
+          {
+            "id": "claim-016",
+            "text": "Le support technique sera organisé autour d'une équipe dédiée, capable de gérer les demandes d'assistance et les mises à jour logicielles.",
+            "kind": "recommendation",
+            "source_ids": [],
+            "citation_indexes": [],
+            "confidence": 1.0
+          }
+        ],
+        "bullets": [
+          "Supervision continue du portail patient HDS.",
+          "Support technique réactif et dédié.",
+          "Astreinte déclenchée en cas d'urgence.",
+          "Gestion proactive des incidents et mises à jour logicielles."
+        ],
+        "tables": [],
+        "questions": [],
+        "facts_from_brief": [],
+        "verified_references": [],
+        "recommendations": [
+          "Le portail patient HDS sera exploitable en conditions opérationnelles stables grâce à une supervision continue et un support technique réactif.",
+          "Une astreinte dédiée sera mise en place pour gérer les incidents critiques et assurer la continuité des services.",
+          "Le support technique sera organisé autour d'une équipe dédiée, capable de gérer les demandes d'assistance et les mises à jour logicielles."
+        ],
+        "assumptions_to_confirm": []
+      },
+      {
+        "key": "risks_assumptions_clarifications",
+        "order": 18,
+        "title": "Risques, dépendances, hypothèses et points à clarifier",
+        "status": "complete",
+        "status_reason": null,
+        "summary": null,
+        "narrative": [
+          "La mise en place du portail patient HDS comporte plusieurs risques et dépendances à identifier et à gérer. Parmi les risques majeurs figurent les retards dans l'interopérabilité avec le DPI, les difficultés d'intégration de l'authentification ProSanté Connect, ainsi que les contraintes liées à la sécurité et à la conformité réglementaire.",
+          "Les hypothèses structurantes incluent la disponibilité des API REST et FHIR pour l'interopérabilité, la compatibilité technique de l'authentification ProSanté Connect, et la collaboration active des équipes internes et externes. Des questions de cadrage restent à clarifier, notamment les attentes précises en matière de sécurité, les plages horaires de support, et les critères de validation des livrables."
+        ],
+        "claims": [
+          {
+            "id": "claim-017",
+            "text": "Les risques liés à l'interopérabilité avec le DPI et à l'intégration de ProSanté Connect nécessitent une gestion proactive.",
+            "kind": "question",
+            "source_ids": [],
+            "citation_indexes": [],
+            "confidence": 1.0
+          },
+          {
+            "id": "claim-018",
+            "text": "L'hypothèse de la disponibilité des API REST et FHIR pour l'interopérabilité doit être confirmée.",
+            "kind": "assumption",
+            "source_ids": [],
+            "citation_indexes": [],
+            "confidence": 1.0
+          },
+          {
+            "id": "claim-019",
+            "text": "La compatibilité technique de l'authentification ProSanté Connect est une hypothèse structurante à confirmer.",
+            "kind": "assumption",
+            "source_ids": [],
+            "citation_indexes": [],
+            "confidence": 1.0
+          },
+          {
+            "id": "claim-020",
+            "text": "Les attentes précises en matière de sécurité et de conformité réglementaire doivent être clarifiées.",
+            "kind": "question",
+            "source_ids": [],
+            "citation_indexes": [],
+            "confidence": 1.0
+          }
+        ],
+        "bullets": [
+          "Risques liés à l'interopérabilité avec le DPI.",
+          "Risques liés à l'intégration de ProSanté Connect.",
+          "Dépendances techniques et organisationnelles.",
+          "Hypothèse de la disponibilité des API REST et FHIR.",
+          "Hypothèse de la compatibilité de ProSanté Connect.",
+          "Questions de cadrage sur les attentes en matière de sécurité.",
+          "Questions de cadrage sur les plages horaires de support."
+        ],
+        "tables": [],
+        "questions": [],
+        "facts_from_brief": [],
+        "verified_references": [],
+        "recommendations": [
+          "La mise en place du portail patient HDS comporte plusieurs risques et dépendances à identifier et à gérer. Parmi les risques majeurs figurent les retards dans l'interopérabilité avec le DPI, les difficultés d'intégration de l'authentification ProSanté Connect, ainsi que les contraintes liées à la sécurité et à la conformité réglementaire.",
+          "Les hypothèses structurantes incluent la disponibilité des API REST et FHIR pour l'interopérabilité, la compatibilité technique de l'authentification ProSanté Connect, et la collaboration active des équipes internes et externes. Des questions de cadrage restent à clarifier, notamment les attentes précises en matière de sécurité, les plages horaires de support, et les critères de validation des livrables."
+        ],
+        "assumptions_to_confirm": [
+          "Les risques liés à l'interopérabilité avec le DPI et à l'intégration de ProSanté Connect nécessitent une gestion proactive.",
+          "L'hypothèse de la disponibilité des API REST et FHIR pour l'interopérabilité doit être confirmée.",
+          "La compatibilité technique de l'authentification ProSanté Connect est une hypothèse structurante à confirmer.",
+          "Les attentes précises en matière de sécurité et de conformité réglementaire doivent être clarifiées."
+        ]
+      },
+      {
+        "key": "references_differentiation_next_steps",
+        "order": 19,
+        "title": "Références, différenciation Avaliance et prochaines étapes",
+        "status": "complete",
+        "status_reason": null,
+        "summary": null,
+        "narrative": [
+          "Avaliance s'appuie sur des références documentaires internes pour démontrer son expertise dans la mise en place de portails patients sécurisés et interopérables. Le projet de Clinéa Nova et celui du Groupe Santélia illustrent la capacité du cabinet à gérer des projets complexes, avec des livrables clairs et des jalons bien définis.",
+          "La différenciation d'Avaliance réside dans sa maîtrise des normes FHIR et REST, son expérience en intégration de systèmes de santé, et sa capacité à aligner les solutions sur les besoins spécifiques des établissements. Pour démarrer le projet, trois actions immédiates sont proposées : la validation des besoins, la définition des livrables et la mise en place d'une équipe de pilotage."
+        ],
+        "claims": [
+          {
+            "id": "claim-021",
+            "text": "Le projet de Clinéa Nova illustre la capacité d'Avaliance à déployer un portail patient sécurisé et interopérable.",
+            "kind": "internal_evidence",
+            "source_ids": [
+              "doc-01"
+            ],
+            "citation_indexes": [
+              1
+            ],
+            "confidence": 1.0
+          },
+          {
+            "id": "claim-022",
+            "text": "Le projet du Groupe Santélia montre la maîtrise d'Avaliance dans l'interopérabilité du dossier de soins.",
+            "kind": "internal_evidence",
+            "source_ids": [
+              "doc-03"
+            ],
+            "citation_indexes": [
+              3
+            ],
+            "confidence": 1.0
+          },
+          {
+            "id": "claim-023",
+            "text": "La différenciation d'Avaliance réside dans sa maîtrise des normes FHIR et REST, ainsi que dans son expérience en intégration de systèmes de santé.",
+            "kind": "recommendation",
+            "source_ids": [],
+            "citation_indexes": [],
+            "confidence": 1.0
+          }
+        ],
+        "bullets": [
+          "Références internes : projet Clinéa Nova et Groupe Santélia.",
+          "Maîtrise des normes FHIR et REST.",
+          "Expérience en intégration de systèmes de santé.",
+          "Action 1 : Validation des besoins et des attentes.",
+          "Action 2 : Définition des livrables et jalons.",
+          "Action 3 : Mise en place d'une équipe de pilotage."
+        ],
+        "tables": [],
+        "questions": [],
+        "facts_from_brief": [],
+        "verified_references": [
+          {
+            "id": "claim-021",
+            "text": "Le projet de Clinéa Nova illustre la capacité d'Avaliance à déployer un portail patient sécurisé et interopérable.",
+            "kind": "internal_evidence",
+            "source_ids": [
+              "doc-01"
+            ],
+            "citation_indexes": [
+              1
+            ],
+            "confidence": 1.0
+          },
+          {
+            "id": "claim-022",
+            "text": "Le projet du Groupe Santélia montre la maîtrise d'Avaliance dans l'interopérabilité du dossier de soins.",
+            "kind": "internal_evidence",
+            "source_ids": [
+              "doc-03"
+            ],
+            "citation_indexes": [
+              3
+            ],
+            "confidence": 1.0
+          }
+        ],
+        "recommendations": [
+          "La différenciation d'Avaliance réside dans sa maîtrise des normes FHIR et REST, ainsi que dans son expérience en intégration de systèmes de santé."
+        ],
+        "assumptions_to_confirm": []
+      }
+    ],
+    "legacy_markdown": null
+  },
+  "sources": [
+    {
+      "id": "doc-01",
+      "type": "internal_pdf",
+      "title": "03_Clina_Nova_Sante_LIEN_Portail_Patient_Bilan_Projet.pdf (p. 3)",
+      "document_id": 44,
+      "document_name": "03_Clina_Nova_Sante_LIEN_Portail_Patient_Bilan_Projet.pdf",
+      "page": 3,
+      "chunk_id": 1218,
+      "excerpt": "## 1. Résumé exécutif\n\nLe groupe hospitalier fictif Clinéa Nova a mandaté Avaliance pour créer un portail patient unifié et moderniser les échanges entre cinq établissements.\n\nAvant le projet, 61 % des convocations étaient envoyées par courrier et les patients devaient répéter leurs informations à chaque site. Les interfaces HL7 point à point provoquaient 1 900 rejets mensuels.\n\nLa solution propose identité fédérée, consentements, rendez-vous, documents et messagerie sécurisée. Une plateforme d'interopérabilité FHIR traduit les systèmes existants sans remplacer les logiciels médicaux.\n\nSix mois après ouverture, 68 % des patients éligibles utilisent le portail, les appels administratifs ont diminué de 34 % et les rejets d'interface de 87 %.\n\n## Principe de confiance\n\nSéparer strictement identité, consentement et données cliniques.",
+      "url": null,
+      "publisher": null,
+      "score": 0.77490234375
+    },
+    {
+      "id": "doc-02",
+      "type": "internal_pdf",
+      "title": "03_Clina_Nova_Sante_LIEN_Portail_Patient_Bilan_Projet.pdf (p. 17)",
+      "document_id": 44,
+      "document_name": "03_Clina_Nova_Sante_LIEN_Portail_Patient_Bilan_Projet.pdf",
+      "page": 17,
+      "chunk_id": 1238,
+      "excerpt": "## 15. Annexes\n\n## 15.1 Livrables contractuels\n\nRéf.: L1; Livrable: Cartographie parcours; Phase: P1; Validation: 31/05/24\n\nRéf.: L2; Livrable: Architecture HDS; Phase: P2; Validation: 04/10/24\n\nRéf.: L3; Livrable: Pilote portail; Phase: P3; Validation: 20/12/24\n\nRéf.: L4; Livrable: Profils FHIR; Phase: P4; Validation: 27/06/25\n\nRéf.: L5; Livrable: Plan migration; Phase: P5; Validation: 18/07/25\n\nRéf.: L6; Livrable: Homologation et exploitation; Phase: P6; Validation: 28/11/25\n\n## 15.2 Glossaire\n\nTerme: FHIR; Définition: Standard d'échange de données de santé.\n\nTerme: DPI; Définition: Dossier patient informatisé.\n\nTerme: HDS; Définition: Hébergement de données de santé.\n\nTerme: Index patient maître; Définition: Référentiel de rapprochement des identités.\n\n## 15.3 Contacts\n\n- Direction de programme - Amel Saïdi, a.saidi@avaliance.example",
+      "url": null,
+      "publisher": null,
+      "score": 0.6904296875
+    },
+    {
+      "id": "doc-03",
+      "type": "internal_pdf",
+      "title": "05_Groupe_Santelia_Portail_Patient_Interoperabilite_Dossier_Projet.pdf (p. 1)",
+      "document_id": 8,
+      "document_name": "05_Groupe_Santelia_Portail_Patient_Interoperabilite_Dossier_Projet.pdf",
+      "page": 1,
+      "chunk_id": 1102,
+      "excerpt": "## Portail patient et interopérabilité du dossier de soins\n\nGroupe Santélia - Direction des services numériques · Dossier de fin de projet\n\nCLIENT\n\nGroupe Santélia\n\nSECTEUR\n\nSanté - établissements de soins\n\nTYPE DE MISSION\n\nPortail usager et interopérabilité applicative\n\nPÉRIODE\n\nAvril 2025 - Mars 2026 (12 mois)\n\nBUDGET CONSOMMÉ\n\n2 705 967 € HT\n\nÉQUIPE\n\n18 personnes (13 Avaliance, 5 Santélia)\n\nRÉFÉRENCE\n\nAVL-2026-STL-008\n\nVERSION\n\n1.5 - 27 mars 2026\n\nSTATUT\n\nProjet clôturé, déploiement généralisé\n\n## Objet du document\n\nCe dossier de fin de projet présente la mise en œuvre du portail patient du Groupe Santélia et de son socle d'interopérabilité : parcours de préadmission en ligne, API conformes aux normes du secteur, intégration des référentiels nationaux d'identité, hébergement certifié pour les données de santé, résultats d'usage sur les six premiers mois et trajectoire recommandée.",
+      "url": null,
+      "publisher": null,
+      "score": 0.587890625
+    },
+    {
+      "id": "doc-04",
+      "type": "internal_pdf",
+      "title": "03_Clina_Nova_Sante_LIEN_Portail_Patient_Bilan_Projet.pdf (p. 6)",
+      "document_id": 44,
+      "document_name": "03_Clina_Nova_Sante_LIEN_Portail_Patient_Bilan_Projet.pdf",
+      "page": 6,
+      "chunk_id": 1222,
+      "excerpt": "## 4. Périmètre et interfaces\n\n## 4.1 Périmètre inclus\n\n- Inscription, identité, consentements, rendez-vous, documents et messagerie.\n\n- Passerelle FHIR/HL7 vers DPI, laboratoire, imagerie et agenda.\n\n- Reprise de 8,4 millions de documents récents.\n\n- Formation des secrétariats et support de démarrage.\n\n## 4.2 Périmètre exclu\n\nLe dossier médical informatisé, la prescription, la facturation et les dispositifs médicaux connectés ne sont pas remplacés.\n\n## 4.3 Interfaces principales\n\nSystème tiers: DPI; Échange: Séjours et documents; Protocole: FHIR / HL7; Volumétrie: 2,7 M msg/j\n\nSystème tiers: Laboratoire; Échange: Résultats validés; Protocole: HL7 ORU; Volumétrie: 410 k/j\n\nSystème tiers: Imagerie; Échange: Comptes rendus; Protocole: FHIR; Volumétrie: 88 k/j\n\nSystème tiers: Agenda; Échange: Rendez-vous; Protocole: API REST; Volumétrie: 132 k/j",
+      "url": null,
+      "publisher": null,
+      "score": 0.443603515625
+    },
+    {
+      "id": "doc-05",
+      "type": "internal_pdf",
+      "title": "05_Groupe_Santelia_Portail_Patient_Interoperabilite_Dossier_Projet.pdf (p. 6)",
+      "document_id": 8,
+      "document_name": "05_Groupe_Santelia_Portail_Patient_Interoperabilite_Dossier_Projet.pdf",
+      "page": 6,
+      "chunk_id": 1116,
+      "excerpt": "- Questionnaire préopératoire et questionnaire de sortie.\n\n- Espace accompagnant, avec délégation d'accès encadrée et révocable.\n\n- Portail professionnel de ville : accès aux documents des patients adressés par le praticien.\n\n## 3.3 Périmètre exclu\n\nSont restés hors périmètre : le remplacement du dossier patient informatisé, la facturation et la gestion administrative des séjours, la téléconsultation, la prescription électronique, et la gestion des plannings médicaux. Le portail s'intègre à ces systèmes sans les remplacer.",
+      "url": null,
+      "publisher": null,
+      "score": 0.2105712890625
+    }
+  ],
+  "coverageReport": [
+    {
+      "need_id": "need-01",
+      "covered": true,
+      "section_keys": [
+        "executive_summary",
+        "context_understanding",
+        "functional_solution",
+        "security_compliance_governance",
+        "operations_and_support",
+        "risks_assumptions_clarifications",
+        "references_differentiation_next_steps"
+      ]
+    },
+    {
+      "need_id": "need-02",
+      "covered": true,
+      "section_keys": [
+        "executive_summary",
+        "context_understanding",
+        "objectives_and_outcomes",
+        "scope_exclusions",
+        "functional_solution",
+        "technical_architecture",
+        "integrations_and_interfaces",
+        "security_compliance_governance",
+        "migration_deployment_reversibility",
+        "operations_and_support",
+        "risks_assumptions_clarifications",
+        "references_differentiation_next_steps"
+      ]
+    },
+    {
+      "need_id": "need-03",
+      "covered": true,
+      "section_keys": [
+        "context_understanding",
+        "functional_solution",
+        "technical_architecture",
+        "risks_assumptions_clarifications"
+      ]
+    }
+  ],
+  "citations": [
+    {
+      "citation_id": "rfp-1218",
+      "chunk_id": 1218,
+      "document_id": 44,
+      "document_name": "03_Clina_Nova_Sante_LIEN_Portail_Patient_Bilan_Projet.pdf",
+      "page": 3,
+      "content": "## 1. Résumé exécutif\n\nLe groupe hospitalier fictif Clinéa Nova a mandaté Avaliance pour créer un portail patient unifié et moderniser les échanges entre cinq établissements.\n\nAvant le projet, 61 % des convocations étaient envoyées par courrier et les patients devaient répéter leurs informations à chaque site. Les interfaces HL7 point à point provoquaient 1 900 rejets mensuels.\n\nLa solution propose identité fédérée, consentements, rendez-vous, documents et messagerie sécurisée. Une plateforme d'interopérabilité FHIR traduit les systèmes existants sans remplacer les logiciels médicaux.\n\nSix mois après ouverture, 68 % des patients éligibles utilisent le portail, les appels administratifs ont diminué de 34 % et les rejets d'interface de 87 %.\n\n## Principe de confiance\n\nSéparer strictement identité, consentement et données cliniques.",
+      "source_index": 1
+    },
+    {
+      "citation_id": "rfp-1238",
+      "chunk_id": 1238,
+      "document_id": 44,
+      "document_name": "03_Clina_Nova_Sante_LIEN_Portail_Patient_Bilan_Projet.pdf",
+      "page": 17,
+      "content": "## 15. Annexes\n\n## 15.1 Livrables contractuels\n\nRéf.: L1; Livrable: Cartographie parcours; Phase: P1; Validation: 31/05/24\n\nRéf.: L2; Livrable: Architecture HDS; Phase: P2; Validation: 04/10/24\n\nRéf.: L3; Livrable: Pilote portail; Phase: P3; Validation: 20/12/24\n\nRéf.: L4; Livrable: Profils FHIR; Phase: P4; Validation: 27/06/25\n\nRéf.: L5; Livrable: Plan migration; Phase: P5; Validation: 18/07/25\n\nRéf.: L6; Livrable: Homologation et exploitation; Phase: P6; Validation: 28/11/25\n\n## 15.2 Glossaire\n\nTerme: FHIR; Définition: Standard d'échange de données de santé.\n\nTerme: DPI; Définition: Dossier patient informatisé.\n\nTerme: HDS; Définition: Hébergement de données de santé.\n\nTerme: Index patient maître; Définition: Référentiel de rapprochement des identités.\n\n## 15.3 Contacts\n\n- Direction de programme - Amel Saïdi, a.saidi@avaliance.example",
+      "source_index": 2
+    },
+    {
+      "citation_id": "rfp-1102",
+      "chunk_id": 1102,
+      "document_id": 8,
+      "document_name": "05_Groupe_Santelia_Portail_Patient_Interoperabilite_Dossier_Projet.pdf",
+      "page": 1,
+      "content": "## Portail patient et interopérabilité du dossier de soins\n\nGroupe Santélia - Direction des services numériques · Dossier de fin de projet\n\nCLIENT\n\nGroupe Santélia\n\nSECTEUR\n\nSanté - établissements de soins\n\nTYPE DE MISSION\n\nPortail usager et interopérabilité applicative\n\nPÉRIODE\n\nAvril 2025 - Mars 2026 (12 mois)\n\nBUDGET CONSOMMÉ\n\n2 705 967 € HT\n\nÉQUIPE\n\n18 personnes (13 Avaliance, 5 Santélia)\n\nRÉFÉRENCE\n\nAVL-2026-STL-008\n\nVERSION\n\n1.5 - 27 mars 2026\n\nSTATUT\n\nProjet clôturé, déploiement généralisé\n\n## Objet du document\n\nCe dossier de fin de projet présente la mise en œuvre du portail patient du Groupe Santélia et de son socle d'interopérabilité : parcours de préadmission en ligne, API conformes aux normes du secteur, intégration des référentiels nationaux d'identité, hébergement certifié pour les données de santé, résultats d'usage sur les six premiers mois et trajectoire recommandée.",
+      "source_index": 3
+    },
+    {
+      "citation_id": "rfp-1222",
+      "chunk_id": 1222,
+      "document_id": 44,
+      "document_name": "03_Clina_Nova_Sante_LIEN_Portail_Patient_Bilan_Projet.pdf",
+      "page": 6,
+      "content": "## 4. Périmètre et interfaces\n\n## 4.1 Périmètre inclus\n\n- Inscription, identité, consentements, rendez-vous, documents et messagerie.\n\n- Passerelle FHIR/HL7 vers DPI, laboratoire, imagerie et agenda.\n\n- Reprise de 8,4 millions de documents récents.\n\n- Formation des secrétariats et support de démarrage.\n\n## 4.2 Périmètre exclu\n\nLe dossier médical informatisé, la prescription, la facturation et les dispositifs médicaux connectés ne sont pas remplacés.\n\n## 4.3 Interfaces principales\n\nSystème tiers: DPI; Échange: Séjours et documents; Protocole: FHIR / HL7; Volumétrie: 2,7 M msg/j\n\nSystème tiers: Laboratoire; Échange: Résultats validés; Protocole: HL7 ORU; Volumétrie: 410 k/j\n\nSystème tiers: Imagerie; Échange: Comptes rendus; Protocole: FHIR; Volumétrie: 88 k/j\n\nSystème tiers: Agenda; Échange: Rendez-vous; Protocole: API REST; Volumétrie: 132 k/j",
+      "source_index": 4
+    },
+    {
+      "citation_id": "rfp-1116",
+      "chunk_id": 1116,
+      "document_id": 8,
+      "document_name": "05_Groupe_Santelia_Portail_Patient_Interoperabilite_Dossier_Projet.pdf",
+      "page": 6,
+      "content": "- Questionnaire préopératoire et questionnaire de sortie.\n\n- Espace accompagnant, avec délégation d'accès encadrée et révocable.\n\n- Portail professionnel de ville : accès aux documents des patients adressés par le praticien.\n\n## 3.3 Périmètre exclu\n\nSont restés hors périmètre : le remplacement du dossier patient informatisé, la facturation et la gestion administrative des séjours, la téléconsultation, la prescription électronique, et la gestion des plannings médicaux. Le portail s'intègre à ces systèmes sans les remplacer.",
+      "source_index": 5
+    }
+  ],
+  "similarMissions": [],
+  "evidenceValidationPassed": true,
+  "quality": {
+    "passed": true,
+    "score": 0.79,
+    "coverage_score": 1.0,
+    "citation_integrity": 0.75,
+    "section_count": 19,
+    "generation_mode": "mixed_fallback",
+    "planner_mode": "deterministic_fallback",
+    "extraction_mode": "llm",
+    "repair_attempted": false,
+    "failed_cluster_keys": [
+      "executive_summary",
+      "context_understanding",
+      "stakes_and_problem",
+      "objectives_and_outcomes",
+      "scope_inclusions",
+      "scope_exclusions",
+      "functional_solution",
+      "technical_architecture",
+      "integrations_and_interfaces",
+      "security_compliance_governance",
+      "methodology_phases_deliverables",
+      "planning_and_milestones",
+      "team_and_governance",
+      "testing_and_acceptance",
+      "migration_deployment_reversibility",
+      "change_management_training"
+    ],
+    "coverage_detail": 20.0,
+    "provenance_detail": 20.0,
+    "specificity_detail": 8.0,
+    "solution_quality_detail": 13.0,
+    "governance_detail": 7.0,
+    "writing_detail": 6.0,
+    "source_quality_detail": 5.0,
+    "warnings": [
+      "Planification des sections réalisée via le moteur déterministe.",
+      "Génération déterministe pour le cluster ['executive_summary', 'context_understanding', 'stakes_and_problem', 'objectives_and_outcomes']",
+      "Génération déterministe pour le cluster ['scope_inclusions', 'scope_exclusions', 'functional_solution', 'technical_architecture']",
+      "Génération déterministe pour le cluster ['integrations_and_interfaces', 'security_compliance_governance', 'methodology_phases_deliverables', 'planning_and_milestones']",
+      "Génération déterministe pour le cluster ['team_and_governance', 'testing_and_acceptance', 'migration_deployment_reversibility', 'change_management_training']"
+    ]
+  },
+  "diagnostic": null
+}
