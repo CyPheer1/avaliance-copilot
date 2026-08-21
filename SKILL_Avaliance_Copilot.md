@@ -636,3 +636,5 @@ Missions similaires :
 ### Fin de la skill. L'agent doit maintenant exécuter P0 → P5 dans l'ordre, en respectant les règles d'or (§2) et les non-goals (§19), jusqu'à la checklist d'acceptation (§18) complète.
 
 The old JSON is not authoritative and may be inaccurate. Do not repair the production corpus to match it; replace the evaluation methodology with a new golden dataset grounded in the real PDFs currently indexed in PostgreSQL
+
+hiiiii
