@@ -143,6 +143,70 @@ def test_generate_builds_answer_from_exact_evidence_with_per_sentence_citations(
     assert "NO_RELEVANT_EVIDENCE" in prompt
 
 
+def test_generate_prefers_natural_synthesis_before_grounded_extractive_fallback():
+    request = GenerateRequest(query="Quelle solution cible a été retenue ?", chunks=[_chunk()])
+    payload = json.dumps(
+        {
+            "status": "SUPPORTED",
+            "answer": "La cible utilise Azure et Kubernetes. [1]",
+            "coverage": [
+                {
+                    "criterion": "Azure et Kubernetes",
+                    "evidence": [
+                        {
+                            "source": 1,
+                            "quote": "La migration utilise Azure et Kubernetes.",
+                        }
+                    ],
+                }
+            ],
+        },
+        ensure_ascii=False,
+    )
+    extractive = ("## Architecture\nLa migration utilise Azure et Kubernetes. [1]", [_chunk()])
+    with patch("app.generation.service.generate_text", return_value=payload) as generate_text, patch(
+        "app.generation.service._grounded_sentence_fallback", return_value=extractive
+    ) as fallback:
+        response = generate_sourced_answer(request, _settings())
+
+    assert response.answer == "La cible utilise Azure et Kubernetes. [1]"
+    assert response.validation_passed is True
+    generate_text.assert_called_once()
+    fallback.assert_not_called()
+
+
+def test_generate_formats_named_technical_objectives_without_copying_other_sections():
+    chunk = _chunk().model_copy(
+        update={
+            "document_name": "01_Credalis_Banque_NovaShield_Bilan_Projet.pdf",
+            "content": (
+                "## 3. Objectifs et indicateurs contractuels "
+                "## 3.1 Objectifs métier - Réduire les faux positifs. "
+                "## 3.2 Objectifs techniques - Évaluer 1 500 transactions par seconde avec un p95 inférieur à 250 ms. "
+                "- Versionner règles, modèles et jeux de variables. "
+                "- Garantir un rejeu déterministe de toute décision. "
+                "- Déployer sans interruption par stratégie bleu/vert. "
+                "## 3.3 Indicateurs de succès Indicateur: Taux de faux positifs; Valeur initiale: 92%"
+            ),
+        }
+    )
+    request = GenerateRequest(
+        query="Quels étaient les objectifs techniques du projet NOVASHIELD — Crédalis Banque ?",
+        chunks=[chunk],
+    )
+
+    with patch("app.generation.service.generate_text") as generate_text:
+        response = generate_sourced_answer(request, _settings())
+
+    assert response.validation_passed is True
+    assert "Objectifs techniques" in response.answer
+    assert "1 500 transactions" in response.answer
+    assert "bleu/vert" in response.answer
+    assert "Objectifs métier" not in response.answer
+    assert "Indicateur:" not in response.answer
+    generate_text.assert_not_called()
+
+
 def test_generate_rejects_table_of_contents_evidence():
     request = GenerateRequest(query="Quelle difficulté ?", chunks=[_chunk()])
     toc_chunk = request.chunks[0].model_copy(
@@ -1218,7 +1282,8 @@ def test_stream_uses_one_structured_ollama_call_and_emits_answer_after_validatio
     assert parsed[-1]["validationPassed"] is True
     generate_text.assert_not_called()
     generate_stream.assert_called_once()
-    assert generate_stream.call_args.args[0].startswith("Tu es le contrôleur d'évidence")
+    assert generate_stream.call_args.args[0].startswith("Tu es Avaliance Copilot")
+    assert "Ne recopie jamais un titre de section" in generate_stream.call_args.args[0]
 
 
 def test_stream_accepts_harmless_space_before_citation_from_model_output():
@@ -1370,3 +1435,73 @@ def test_generate_stream_endpoint_converts_generator_failure_to_terminal_event()
     assert response.status_code == 200
     terminal_event = _sse_payloads([response.text])[0]
     assert terminal_event == {"error": "Generation stream failed"}
+
+def test_budget_fallback_is_natural_and_calculates_remaining():
+    from app.generation.service import _budget_natural_fallback
+
+    chunk = _chunk().model_copy(update={
+        "document_name": "02_Transovia_Logistique_ORION_WMS_Bilan_Projet.pdf",
+        "content": (
+            "## 9.3 Synthèse budgétaire\n\n"
+            "Rubrique: Budget engagé; Montant HT: 4 865 000 €; Part: 100%\n\n"
+            "Rubrique: Budget consommé; Montant HT: 4 794 220 €; Part: 98,5%"
+        ),
+    })
+
+    result = _budget_natural_fallback(
+        "Le projet ORION WMS a-t-il dépassé son budget et quel montant restait disponible à la clôture ?",
+        [chunk],
+    )
+
+    assert result is not None
+    answer, evidence_chunks, spans = result
+    assert "70 780 € restaient disponibles" in answer
+    assert "Rubrique:" not in answer
+    assert "##" not in answer
+    assert evidence_chunks == [chunk]
+    assert spans
+
+
+def test_person_role_candidates_extract_compact_charge_period_row():
+    content = (
+        "Nom: Lucie Fontaine; Rôle: Direction de programme; Entité: Avaliance; "
+        "Charge / période: 80 %· 17 mois"
+    )
+
+    candidates = _person_role_candidates(content, ["direction", "programme"])
+
+    assert candidates == [(
+        2,
+        0,
+        "Nom: Lucie Fontaine; Rôle: Direction de programme; Entité: Avaliance; Charge / période: 80 %· 17 mois",
+    )]
+
+
+def test_generate_deduplicates_identical_person_evidence_from_same_pdf_filename():
+    row = (
+        "Nom: Lucie Fontaine; Rôle: Direction de programme; Entité: Avaliance; "
+        "Charge / période: 80 %· 17 mois"
+    )
+    first = _chunk().model_copy(update={
+        "chunk_id": 901,
+        "document_id": 45,
+        "document_name": "04_MecaNova_Industries_PULSE_Maintenance_Predictive_Bilan_Projet.pdf",
+        "content": row,
+    })
+    duplicate = first.model_copy(update={"chunk_id": 902, "document_id": 46})
+    request = GenerateRequest(
+        query=(
+            "Qui assurait la direction de programme du projet PULSE — MecaNova Industries, "
+            "pour quelle entité et avec quelle charge ?"
+        ),
+        chunks=[first, duplicate],
+    )
+
+    with patch("app.generation.service.generate_text") as generate_text:
+        response = generate_sourced_answer(request, _settings())
+
+    assert "Lucie Fontaine" in response.answer
+    assert "80 %" in response.answer
+    assert "17 mois" in response.answer
+    assert response.citations
+    generate_text.assert_not_called()

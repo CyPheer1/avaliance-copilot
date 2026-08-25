@@ -356,7 +356,7 @@ class RfpQualityReport(BaseModel):
     score: float = Field(default=1.0, ge=0.0, le=1.0)
     coverage_score: float = Field(default=1.0, ge=0.0, le=1.0)
     citation_integrity: float | None = None
-    section_count: int = 19
+    section_count: int = 6
     generation_mode: Literal["llm", "mixed_fallback", "deterministic_fallback", "repair_failed"] | None = None
     planner_mode: Literal["llm", "deterministic_fallback"] | None = None
     extraction_mode: Literal["llm", "deterministic_fallback"] | None = None

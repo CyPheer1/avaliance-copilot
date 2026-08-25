@@ -20,13 +20,13 @@ function App() {
       <Route path="/login" element={<LoginPage />} />
       <Route element={<ProtectedRoute />}>
         <Route element={<AppShell />}>
-          <Route element={<RouteErrorBoundary />}>
+            <Route element={<RouteErrorBoundary />}>
             <Route index element={<Navigate to="/tableau-de-bord" replace />} />
             <Route path="/tableau-de-bord" element={<Suspense fallback={<div className="page db-page" />}><DashboardPage /></Suspense>} />
             <Route path="/recherche" element={<SearchPage />} />
             <Route path="/propositions" element={<RfpPage />} />
-          <Route path="/missions" element={<MissionsPage />} />
-          <Route path="/missions/:missionId" element={<MissionDetailPage />} />
+            <Route path="/missions" element={<MissionsPage />} />
+            <Route path="/missions/:missionId" element={<MissionDetailPage />} />
             <Route element={<AdminRoute />}>
               <Route path="/documents" element={<DocumentsPage />} />
               <Route path="/utilisateurs" element={<UsersPage />} />

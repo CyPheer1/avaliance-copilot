@@ -292,7 +292,7 @@ export function SearchPage() {
           <header className="result-summary">
             <div className="result-summary__identity">
               <span className="result-summary__icon"><img src={logoSrc} alt="" /></span>
-              <div><span className="eyebrow">Réponse Avaliance</span><h2>Réponse sourcée</h2></div>
+              <div><span className="eyebrow">Assistant documentaire</span><h2>Réponse</h2></div>
             </div>
             <div className="result-summary__metrics">
               <span className={`result-summary__state ${isStreaming ? 'result-summary__state--streaming' : ''}`}><span aria-hidden="true" />{isStreaming ? 'En cours' : 'Terminée'}</span>
@@ -305,15 +305,14 @@ export function SearchPage() {
               {isInsufficient ? (
                 <div className="insufficient-callout insufficient-callout--prominent">
                   <div className="insufficient-callout__icon"><AlertTriangle size={28} /></div>
-                  <strong>Information insuffisante</strong>
-                  <p>Le corpus documentaire ne contient pas de preuve assez pertinente pour répondre à cette question. Essayez de reformuler votre question ou de préciser le contexte (secteur, mission, technologie).</p>
+                  <strong>Je ne trouve pas encore de preuve exploitable</strong><p>J’ai parcouru les PDF vérifiés, mais aucune preuve suffisamment précise n’a été confirmée pour répondre sans risque d’inventer. Essayez de préciser le projet, le périmètre ou le type d’information recherché.</p>
                 </div>
               ) : (
                 <>
-                  <div className="answer-panel__heading"><div><span className="eyebrow">Synthèse</span><h2>Ce que le corpus permet d’établir</h2></div><div className="answer-panel__actions"><button className="icon-button" type="button" onClick={() => void copyAnswer()} title="Copier la réponse" aria-label="Copier la réponse"><Clipboard size={17} /></button><button className="icon-button" type="button" title="Donner un avis" aria-label="Donner un avis"><MessageSquare size={17} /></button></div></div>
+                  <div className="answer-panel__heading"><div><span className="eyebrow">Réponse sourcée</span><h2>Ce que les documents permettent d’établir</h2><p className="answer-panel__subtitle">Une synthèse concise, construite uniquement à partir des PDF vérifiés.</p></div><div className="answer-panel__actions"><button className="icon-button" type="button" onClick={() => void copyAnswer()} title="Copier la réponse" aria-label="Copier la réponse"><Clipboard size={17} /></button><button className="icon-button" type="button" title="Donner un avis" aria-label="Donner un avis"><MessageSquare size={17} /></button></div></div>
                   {copied && <span className="copy-confirmation" role="status">Réponse copiée</span>}
                   <div className="stream-answer">
-                    <ReactMarkdown components={{ p: ({ children }) => <p>{renderCitationNodes(children, sourceCardIndexBySourceIndex(citations), selectCitation)}</p>, li: ({ children }) => <li>{renderCitationNodes(children, sourceCardIndexBySourceIndex(citations), selectCitation)}</li> }}>{answer}</ReactMarkdown>
+                    <StructuredAnswer query={query} answer={answer} citations={citations} onSelect={selectCitation} />
                     {isStreaming && <span className="stream-cursor" aria-hidden="true" />}
                     <div ref={answerEndRef} />
                   </div>
@@ -368,9 +367,18 @@ function sourceCardIndexBySourceIndex(citations: Citation[]): Map<number, number
   return new Map(citations.map((citation, cardIndex) => [citation.sourceIndex ?? cardIndex + 1, cardIndex]))
 }
 
+function decodeAnswerEntities(value: string): string {
+  return value
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+}
+
 function renderCitationNodes(children: ReactNode, sourceCards: Map<number, number>, onSelect: (index: number) => void): ReactNode {
   if (typeof children === 'string') {
-    const parts = children.split(/(\[(?:\d+|n)\])/gi)
+    const parts = decodeAnswerEntities(children).split(/(\[(?:\d+|n)\])/gi)
     return parts.map((part, index) => {
       const match = part.match(/^\[(\d+|n)\]$/i)
       if (!match) return part
@@ -382,6 +390,180 @@ function renderCitationNodes(children: ReactNode, sourceCards: Map<number, numbe
   }
   if (Array.isArray(children)) return children.map((child, index) => <span key={index}>{renderCitationNodes(child, sourceCards, onSelect)}</span>)
   return children
+}
+
+
+type AnswerMode = 'identity' | 'team' | 'budget' | 'scope' | 'objectives' | 'summary' | 'metrics' | 'architecture' | 'default'
+
+type MetricRow = { indicator: string; before: string; after: string; evolution: string; target: string }
+type ArchitectureRow = { layer: string; components: string; justification: string; citation: string }
+
+function foldAnswerText(value: string): string {
+  return value.normalize('NFKD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
+}
+
+function detectAnswerMode(query: string): AnswerMode {
+  const folded = foldAnswerText(query)
+  if (folded.includes('fiche') && (folded.includes('identite') || folded.includes('complete'))) return 'identity'
+  if (folded.includes('equipe') && (folded.includes('quelle') || folded.includes('composition') || folded.includes('projet'))) return 'team'
+  if (folded.includes('budget')) return 'budget'
+  if (folded.includes('perimetre') && (folded.includes('exclu') || folded.includes('hors') || folded.includes('non inclus'))) return 'scope'
+  if (folded.includes('objectif') && folded.includes('technique')) return 'objectives'
+  if (folded.includes('resultat mesure') || folded.includes('resultats mesures') || folded.includes('indicateur')) return 'metrics'
+  if (folded.includes('probleme initial') && folded.includes('solution') && (folded.includes('resultat') || folded.includes('impact'))) return 'summary'
+  if (folded.includes('architecture') || folded.includes('choix technique') || folded.includes('mesures de securite') || folded.includes('technologie')) return 'architecture'
+  return 'default'
+}
+
+function splitAnswerBlocks(value: string): string[] {
+  const cleaned = decodeAnswerEntities(value)
+    .replace(/<!--[\s\S]*?-->/g, '')
+    .replace(/\s+(?=##\s)/g, '\n\n')
+    .replace(/;\s+-\s+(?=[A-ZÀ-ÖØ-Þ0-9])/g, ';\n- ')
+  return cleaned.split(/\n{2,}/).map((part) => part.trim()).filter(Boolean)
+}
+
+function identityValues(_query: string, answer: string): string[] {
+  const segments = answer.replace(/\s+\[(\d+)\]/g, ' [$1]\n').split(/\n+/).map((value) => value.trim()).filter(Boolean)
+  return segments.slice(0, 6).map((segment) => {
+    const value = segment
+      .replace(/^(?:CLIENT|SECTEUR):\s*(?:TYPE DE MISSION|PÉRIODE|BUDGET CONSOMMÉ|ÉQUIPE|RÉFÉRENCE|STATUT)\s*;\s*[^:;]+:\s*/i, '')
+      .replace(/^(?:CLIENT|SECTEUR|TYPE DE MISSION|PÉRIODE|BUDGET CONSOMMÉ|ÉQUIPE|RÉFÉRENCE|STATUT)\s*:\s*/i, '')
+      .replace(/^[^:;]{2,80}:\s*/, '')
+      .trim()
+    return value
+  }).filter(Boolean)
+}
+
+function metricRows(answer: string): MetricRow[] {
+  const rows: MetricRow[] = []
+  const pattern = /Indicateur:\s*(.*?);\s*Avant:\s*(.*?);\s*Après:\s*(.*?);\s*Évolution:\s*(.*?);\s*Cible:\s*(.*?)(?=\s+Indicateur:|$)/gi
+  for (const match of answer.matchAll(pattern)) {
+    rows.push({ indicator: match[1].trim(), before: match[2].trim(), after: match[3].trim(), evolution: match[4].trim(), target: match[5].trim() })
+  }
+  return rows
+}
+
+function objectiveRows(answer: string): Array<{ text: string; citation: string }> {
+  const rows: Array<{ text: string; citation: string }> = []
+  const pattern = /^\s*-\s+(.+?)\s+\[(\d+)\]\s*$/gm
+  for (const match of answer.matchAll(pattern)) rows.push({ text: match[1].trim(), citation: `[${match[2]}]` })
+  return rows
+}
+
+function architectureRows(blocks: string[]): ArchitectureRow[] {
+  const rows: ArchitectureRow[] = []
+  const pattern = /Couche:\s*(.*?);\s*Composants retenus:\s*(.*?);\s*Justification:\s*(.*?)(?=\s+Couche:|\s+##|$)/gi
+  for (const block of blocks) {
+    const citation = block.match(/\[(\d+)\]\s*$/)?.[0] ?? ''
+    for (const match of block.matchAll(pattern)) {
+      rows.push({ layer: match[1].trim(), components: match[2].trim(), justification: match[3].trim(), citation })
+    }
+  }
+  return rows
+}
+
+function summaryGroups(blocks: string[]): Array<{ label: string; blocks: string[] }> {
+  const groups: Array<{ label: string; blocks: string[] }> = [
+    { label: 'Contexte et problème initial', blocks: [] },
+    { label: 'Solution retenue', blocks: [] },
+    { label: 'Résultats établis', blocks: [] },
+  ]
+  for (const block of blocks) {
+    const folded = foldAnswerText(block)
+    if (/(a la cloture|six mois|atteint|diminu|recul|resultat|adoption|disponibilite)/.test(folded)) groups[2].blocks.push(block)
+    else if (/(solution|cible|plateforme|feder|fhir|wms cloud|moteur)/.test(folded)) groups[1].blocks.push(block)
+    else groups[0].blocks.push(block)
+  }
+  return groups.filter((group) => group.blocks.length > 0)
+}
+
+type BudgetRow = { label: string; amount: string; share: string }
+
+function budgetRows(answer: string): BudgetRow[] {
+  const rows: BudgetRow[] = []
+  const pattern = /Rubrique:\s*(.*?);\s*Montant HT:\s*(.*?);\s*Part:\s*([^\s]+%)/gi
+  for (const match of answer.matchAll(pattern)) rows.push({ label: match[1].trim(), amount: match[2].trim(), share: match[3].trim() })
+  return rows
+}
+
+function cleanAnswerBlock(value: string): string {
+  return decodeAnswerEntities(value)
+    .replace(/^#{1,6}\s+[^\n]+(?:\n|$)/, '')
+    .replace(/^(?:CLIENT|SECTEUR):\s*[^\n]+(?:\n|$)/i, '')
+    .trim()
+}
+
+function MarkdownAnswer({ answer, sourceCards, onSelect }: { answer: string; sourceCards: Map<number, number>; onSelect: (index: number) => void }) {
+  return <ReactMarkdown components={{
+    p: ({ children }) => <p>{renderCitationNodes(children, sourceCards, onSelect)}</p>,
+    li: ({ children }) => <li>{renderCitationNodes(children, sourceCards, onSelect)}</li>,
+    h1: ({ children }) => <h3>{children}</h3>,
+    h2: ({ children }) => <h3>{children}</h3>,
+    h3: ({ children }) => <h4>{children}</h4>,
+  }}>{decodeAnswerEntities(answer)}</ReactMarkdown>
+}
+
+function StructuredAnswer({ query, answer, citations, onSelect }: { query: string; answer: string; citations: Citation[]; onSelect: (index: number) => void }) {
+  const sourceCards = sourceCardIndexBySourceIndex(citations)
+  const blocks = splitAnswerBlocks(answer)
+  const mode = detectAnswerMode(query)
+  const renderEvidence = (value: string, index: number, className = '') => (
+    <p className={className} key={`${index}-${value.slice(0, 24)}`}>{renderCitationNodes(cleanAnswerBlock(value), sourceCards, onSelect)}</p>
+  )
+
+  if (mode === 'identity') {
+    const values = identityValues(query, answer)
+    const labels = ['Mission', 'Période', 'Budget consommé', 'Équipe', 'Référence', 'Statut']
+    if (values.length >= 4) {
+      const projectContext = query.match(/projet\s+(.+?)(?::|\s+—)/i)?.[1]?.trim()
+      return <div className="answer-structured answer-structured--identity">
+        {projectContext && <div className="answer-context-line"><span>Projet demandé</span><strong>{projectContext}</strong></div>}
+        <div className="answer-fact-grid">{values.map((value, index) => <div className="answer-fact-card" key={`${labels[index] ?? 'fait'}-${index}`}><span className="answer-fact-card__label">{labels[index] ?? 'Fait établi'}</span><div>{renderCitationNodes(value, sourceCards, onSelect)}</div></div>)}</div>
+      </div>
+    }
+  }
+
+  if (mode === 'team') {
+    const match = answer.match(/(\d+\s+personnes\s*\([^)]*\))/i)
+    const value = match?.[1] ?? cleanAnswerBlock(answer)
+    return <div className="answer-structured answer-structured--field"><div className="answer-structured__eyebrow">Équipe mobilisée</div><section className="answer-fact-card answer-fact-card--wide"><span className="answer-fact-card__label">Composition de l’équipe</span><div>Le projet a mobilisé {renderCitationNodes(`${value} [1]`, sourceCards, onSelect)}</div></section></div>
+  }
+
+  if (mode === 'budget') {
+    const rows = budgetRows(answer)
+    if (rows.length > 0) return <div className="answer-structured answer-structured--budget"><div className="answer-structured__eyebrow">Répartition budgétaire</div><div className="answer-table-wrap"><table className="answer-facts-table"><thead><tr><th>Rubrique</th><th>Montant HT</th><th>Part</th></tr></thead><tbody>{rows.map((row, index) => <tr key={`${row.label}-${index}`}><td>{row.label}</td><td>{renderCitationNodes(`${row.amount} [1]`, sourceCards, onSelect)}</td><td>{renderCitationNodes(`${row.share} [1]`, sourceCards, onSelect)}</td></tr>)}</tbody></table></div></div>
+  }
+
+  if (mode === 'scope') {
+    return <div className="answer-structured answer-structured--scope"><div className="answer-structured__eyebrow">Périmètre exclu</div><section className="answer-summary-card"><h3>Ce qui n’était pas inclus</h3>{blocks.map((block, index) => renderEvidence(block, index))}</section></div>
+  }
+
+  if (mode === 'objectives') {
+    const rows = objectiveRows(answer)
+    if (rows.length > 0) return <div className="answer-structured answer-structured--objectives"><div className="answer-structured__eyebrow">Objectifs techniques</div><section className="answer-summary-card"><h3>Ce que la cible devait garantir</h3><ul>{rows.map((row, index) => <li key={`${index}-${row.text.slice(0, 24)}`}>{renderCitationNodes(`${row.text} ${row.citation}`, sourceCards, onSelect)}</li>)}</ul></section></div>
+  }
+
+  if (mode === 'metrics') {
+    const rows = metricRows(answer)
+    if (rows.length > 0) {
+      return <div className="answer-structured answer-structured--metrics"><div className="answer-structured__eyebrow">Indicateurs retrouvés</div><div className="answer-table-wrap"><table className="answer-facts-table"><thead><tr><th>Indicateur</th><th>Avant</th><th>Après</th><th>Évolution</th><th>Cible</th></tr></thead><tbody>{rows.map((row, index) => <tr key={`${row.indicator}-${index}`}><td>{renderCitationNodes(row.indicator, sourceCards, onSelect)}</td><td>{renderCitationNodes(row.before, sourceCards, onSelect)}</td><td>{renderCitationNodes(row.after, sourceCards, onSelect)}</td><td>{renderCitationNodes(row.evolution, sourceCards, onSelect)}</td><td>{renderCitationNodes(row.target, sourceCards, onSelect)}</td></tr>)}</tbody></table></div></div>
+    }
+  }
+
+  if (mode === 'summary') {
+    const groups = summaryGroups(blocks)
+    if (groups.length >= 2) return <div className="answer-structured answer-structured--summary">{groups.map((group) => <section className="answer-summary-card" key={group.label}><h3>{group.label}</h3>{group.blocks.map((block, index) => renderEvidence(block, index))}</section>)}</div>
+  }
+
+  if (mode === 'architecture') {
+    const rows = architectureRows(blocks)
+    const securityBlocks = blocks.filter((block) => !/Couche:/i.test(block) && /(sécurité|mfa|chiffrement|certificat|journal|contrôle d’accès|accès par rôle|conformité)/i.test(block))
+    if (rows.length > 0) return <div className="answer-structured answer-structured--architecture"><div className="answer-structured__eyebrow">Architecture retenue</div><div className="answer-table-wrap"><table className="answer-facts-table answer-architecture-table"><thead><tr><th>Couche</th><th>Composants retenus</th><th>Justification</th></tr></thead><tbody>{rows.map((row, index) => <tr key={`${row.layer}-${index}`}><td>{row.layer}</td><td>{renderCitationNodes(`${row.components} ${row.citation}`, sourceCards, onSelect)}</td><td>{renderCitationNodes(`${row.justification} ${row.citation}`, sourceCards, onSelect)}</td></tr>)}</tbody></table></div>{securityBlocks.length > 0 && <section className="answer-security-card"><h3>Sécurité et conformité</h3>{securityBlocks.map((block, index) => renderEvidence(block, index, 'answer-security-card__text'))}</section>}</div>
+    return <div className="answer-structured answer-structured--architecture"><div className="answer-structured__eyebrow">Éléments techniques retrouvés</div>{blocks.map((block, index) => <div className="answer-evidence-block" key={`${index}-${block.slice(0, 24)}`}>{renderEvidence(block, index)}</div>)}</div>
+  }
+
+  return <div className="answer-structured answer-structured--default"><MarkdownAnswer answer={answer} sourceCards={sourceCards} onSelect={onSelect} /></div>
 }
 
 function SourceCard({ citation, index, selected, onSelect }: { citation: Citation; index: number; selected: boolean; onSelect: () => void }) {

@@ -25,6 +25,7 @@ from app.schemas import (
 )
 from app.settings import Settings
 import asyncio
+import time
 
 @pytest.fixture
 def mock_settings():
@@ -57,9 +58,9 @@ def test_call_a_uses_configured_sync_budget_not_legacy_twenty_seconds(mock_setti
     mock_settings.rfp_sync_timeout_seconds = 180
 
     with patch("app.generation.rfp_proposal.generate_text", return_value='{"atomic_needs": []}') as generate:
-        _generate_call_a(request, mock_settings, deadline=10_000.0)
+        _generate_call_a(request, mock_settings, deadline=time.monotonic() + 185.0)
 
-    assert generate.call_args.kwargs["timeout_seconds"] == 180
+    assert generate.call_args.kwargs["timeout_seconds"] == pytest.approx(180, abs=0.01)
 
 def test_generate_brief_mode(mock_settings):
     """Brief mode should generate exactly 4 sections."""
@@ -85,8 +86,8 @@ def test_generate_brief_mode(mock_settings):
          assert mock_batch.call_count == 1
          assert resp.status == "completed"
 
-def test_generate_standard_mode_parallel(mock_settings):
-    """Standard mode should generate exactly 6 sections using parallel CALL B and C."""
+def test_generate_standard_mode(mock_settings):
+    """Standard mode should generate exactly 6 sections using 1 batch."""
     req = RfpRequest(description="Test standard", mode="standard")
 
     with patch("app.generation.rfp_proposal._generate_call_a") as mock_call_a, \
@@ -108,7 +109,7 @@ def test_generate_standard_mode_parallel(mock_settings):
          resp = asyncio.run(generate_standard_rfp_async(req, mock_settings, "standard"))
 
          assert len(resp.proposal.sections) == 6
-         assert mock_batch.call_count == 2
+         assert mock_batch.call_count == 1
          assert resp.status == "completed"
          assert resp.metrics.section_count == 6
 
@@ -149,7 +150,7 @@ def test_repair_logic(mock_settings):
          # Force validation to fail for the first section
          def fake_validate(s, evidence_ids):
              if s.key == "executive_summary":
-                 return ["Violation!"]
+                 return ["Citation canonique invalide"]
              return []
          mock_validate.side_effect = fake_validate
 

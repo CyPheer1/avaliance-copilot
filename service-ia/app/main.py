@@ -327,8 +327,11 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         response: Response,
         x_request_id: Annotated[str | None, Header(alias="X-Request-Id")] = None,
     ) -> RfpResponse:
-        if request.mode == "full":
-            raise HTTPException(status_code=422, detail="Full mode must use /rfp/jobs")
+        if request.mode != "standard":
+            raise HTTPException(
+                status_code=422,
+                detail="Only the compact standard RFP mode is supported",
+            )
         request.request_id = request.request_id or x_request_id or secrets.token_urlsafe(16)
         response.headers["X-Request-Id"] = request.request_id
         from .generation.ollama import OllamaUnavailableError

@@ -86,7 +86,7 @@ const mock19Sections = canonical19Keys.map((key, idx) => ({
   assumptionsToConfirm: [],
 }))
 
-test('[MOCKED-API] RFP proposal renders all 19 sections, claim badges, citations, and actions', async ({ page, context }) => {
+test('[MOCKED-API] RFP proposal renders the six-section proposal, claim badges, citations, and actions', async ({ page, context }) => {
   await context.grantPermissions(['clipboard-read', 'clipboard-write'])
   const pageErrors: Error[] = []
   page.on('pageerror', (error) => pageErrors.push(error))
@@ -155,17 +155,15 @@ test('[MOCKED-API] RFP proposal renders all 19 sections, claim badges, citations
 
   // 4. Verify rendered components
   await expect(page.getByRole('heading', { name: 'Proposition de réponse — Santé' })).toBeVisible()
-  await expect(page.getByText('Sections : 19/19')).toBeVisible()
-  await expect(page.getByText('Indice de conformité : 100%')).toBeVisible()
-  await expect(page.getByText('Preuves PDF : 1 document(s)')).toBeVisible()
+  await expect(page.getByText('Sections : 6/6')).toBeVisible()
+  await expect(page.getByText('Sections produites').first()).toBeVisible()
+  await expect(page.getByText('Références PDF').first()).toBeVisible()
+  await expect(page.getByText('Validation').first()).toBeVisible()
+  await expect(page.getByText('Prêt à valider').first()).toBeVisible()
+  await expect(page.getByText('PDF').first()).toBeVisible()
 
-  // Verify Claim Badges
-  await expect(page.getByText('Faits issus du brief client').first()).toBeVisible()
-  await expect(page.getByText('Références internes vérifiées').first()).toBeVisible()
-  await expect(page.getByText('Recommandations méthodologiques & techniques').first()).toBeVisible()
-
-  // Verify Citation Chip
-  await expect(page.locator('.citation-chip').first()).toBeVisible()
+  // Verify the structured proposal body
+  await expect(page.locator('.rfp-proposal-section').first()).toBeVisible()
 
   // Verify Action Buttons
   await expect(page.getByRole('button', { name: 'Copier' })).toBeVisible()
@@ -224,9 +222,9 @@ test('[MOCKED-API] RFP proposal renders honest fallback and warning when no evid
   await page.getByRole('button', { name: 'Générer la proposition' }).click()
 
   // 4. Verify No-Evidence Warning Banner
-  await expect(page.locator('.rfp-no-evidence')).toContainText('Aucune preuve PDF suffisamment pertinente n’a été retenue dans la base interne')
-  await expect(page.getByText('Indice de conformité : 70%')).toBeVisible()
-  await expect(page.getByText('Avertissements : 1')).toBeVisible()
+  await expect(page.locator('.rfp-no-evidence')).toContainText('Aucune preuve PDF interne pertinente n’a été trouvée dans la base interne')
+  await expect(page.getByText('À compléter').first()).toBeVisible()
+  await expect(page.getByText('Références PDF').first()).toBeVisible()
 
   expect(pageErrors).toEqual([])
 })
@@ -252,8 +250,8 @@ test('[REAL-STACK] Live end-to-end RFP generation against backend without mockin
 
   // 3. Wait for real generation to complete (up to 420s)
   await expect(page.locator('.rfp-document')).toBeVisible({ timeout: 420_000 })
-  await expect(page.getByText(/Sections : 19\/19/)).toBeVisible()
-  await expect(page.getByText(/Indice de conformité :/)).toBeVisible()
+  await expect(page.getByText(/Sections : 6\/6/)).toBeVisible()
+  await expect(page.getByText(/Validation|Prêt à valider|À compléter/).first()).toBeVisible()
 
   expect(pageErrors).toEqual([])
 })

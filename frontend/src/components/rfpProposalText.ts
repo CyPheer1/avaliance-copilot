@@ -15,39 +15,21 @@ export function proposalToText(proposal: RfpProposal): string {
       continue
     }
 
-    if (section.summary) {
-      lines.push(section.summary)
+    const bodyText = section.body || section.summary
+    if (bodyText) {
+      lines.push(bodyText)
     }
-    if (section.body) {
-      lines.push(section.body)
-    }
-
-    if (section.narrative && section.narrative.length > 0) {
-      lines.push(...section.narrative)
+    
+    if (section.evidence && section.evidence.length > 0) {
+      lines.push('Références internes vérifiées : ' + section.evidence.map((ev) => `[${ev.id}]`).join(' '))
     }
 
-    if (section.factsFromBrief.length > 0) {
-      lines.push('Éléments du brief :', ...section.factsFromBrief.map((f) => `- ${f}`))
+    const bullets = section.bullets?.slice(0, 3) || []
+    if (bullets.length > 0) {
+      lines.push(...bullets.map((b) => `- ${b.text}`))
     }
 
-    if (section.bullets && section.bullets.length > 0) {
-      lines.push(...section.bullets.map((b) => `- ${b.text}${b.anchor?.id ? ` [${b.anchor.id}]` : ''}`))
-    }
-
-    if (section.verifiedReferences.length > 0) {
-      lines.push(
-        'Références internes vérifiées :',
-        ...section.verifiedReferences.map(
-          (ref) => `- ${ref.text} ${ref.citationIndexes.map((idx) => `[${idx}]`).join(' ')}`
-        )
-      )
-    }
-
-    if (section.recommendations.length > 0 && (!section.narrative || section.narrative.length === 0)) {
-      lines.push(...section.recommendations)
-    }
-
-    if (section.tables.length > 0) {
+    if (section.tables && section.tables.length > 0) {
       for (const table of section.tables) {
         lines.push(
           table.title,
@@ -57,13 +39,15 @@ export function proposalToText(proposal: RfpProposal): string {
         )
       }
     }
-
-    if (section.assumptionsToConfirm.length > 0) {
-      lines.push('Hypothèses et points à confirmer :', ...section.assumptionsToConfirm.map((a) => `- ${a}`))
+    
+    const assumptions = (section.assumptions || section.assumptionsToConfirm || []).slice(0, 2)
+    if (assumptions.length > 0) {
+      lines.push('Hypothèses et points à confirmer :', ...assumptions.map((a) => `- ${a}`))
     }
 
-    if (section.questions && section.questions.length > 0) {
-      lines.push('Questions de cadrage :', ...section.questions.map((q) => `? ${q}`))
+    const questions = (section.questions || []).slice(0, 3)
+    if (questions.length > 0) {
+      lines.push('Questions de cadrage :', ...questions.map((q) => `? ${q}`))
     }
   }
 

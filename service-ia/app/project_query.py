@@ -11,11 +11,12 @@ _UNQUOTED_PROJECT_PREFIX_PATTERNS = (
     re.compile(r"\bdans\s+le\s+projet\s+", re.IGNORECASE),
     re.compile(r"\b(?:du|de|au\s+sein\s+du|sur\s+le|concernant\s+le)\s+projet\s+", re.IGNORECASE),
     re.compile(r"\ble\s+projet\s+", re.IGNORECASE),
+    re.compile(r"\b(?:pour|sur|avec|concernant)\s+", re.IGNORECASE),
 )
 _PROJECT_QUERY_DELIMITER = re.compile(
     r"(?:,\s*|\s+[?.!]|\s+(?:qui|que|quel(?:le|les|s)?|comment|pourquoi|combien|où|quand|"
     r"est|a|a-t-il|a-t-elle|ont|ont-ils|ont-elles|faut-il|peut-on|doit-on|"
-    r"quels\s+sont|quelles\s+sont)\b)",
+    r"devait(?:-il|-elle)?|pouvait(?:-il|-elle)?|quels\s+sont|quelles\s+sont)\b)",
     re.IGNORECASE,
 )
 

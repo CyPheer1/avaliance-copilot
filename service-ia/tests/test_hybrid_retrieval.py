@@ -462,3 +462,34 @@ def test_vector_search_applies_mission_scope_before_ranking():
     assert response.chunks[0].request_id == "req-2"
     assert all("dc.corpus_scope = %s" in call.args[0] for call in execute_query.call_args_list)
     assert all("dc.mission_id IS NOT NULL" in call.args[0] for call in execute_query.call_args_list)
+
+def test_named_pdf_resolution_keeps_duplicate_ingestion_family(monkeypatch):
+    from app.retrieval.vector_search import _resolve_named_pdf_ids
+
+    with (
+        patch("app.retrieval.vector_search.is_initialized", return_value=True),
+        patch(
+            "app.retrieval.vector_search.execute_query",
+            return_value=[{"document_id": 45}, {"document_id": 46}],
+        ) as execute_query,
+    ):
+        ids = _resolve_named_pdf_ids("Qui assurait la direction de programme du projet PULSE — MecaNova Industries, pour quelle entité et avec quelle charge ?")
+
+    assert ids == [45, 46]
+    sql = execute_query.call_args.args[0]
+    assert "status = 'INDEXED'" in sql
+    assert "LOWER(original_filename) LIKE %s" in sql
+
+
+def test_named_pdf_exact_rows_preserve_pdf_sector_filter():
+    from app.retrieval.vector_search import _named_pdf_exact_rows
+
+    chunk = {"chunk_id": 1, "document_id": 45, "content": "Direction de programme"}
+    with (
+        patch("app.retrieval.vector_search.is_initialized", return_value=True),
+        patch("app.retrieval.vector_search.execute_query", side_effect=[[{"document_id": 45}], [chunk]]) as execute_query,
+    ):
+        rows = _named_pdf_exact_rows("Qui assurait la direction de programme du projet PULSE — MecaNova Industries, pour quelle entité et avec quelle charge ?", limit=10, sector="industrie")
+
+    assert rows == [chunk]
+    assert "dc.sector = %s OR dc.sector IS NULL" in execute_query.call_args_list[1].args[0]

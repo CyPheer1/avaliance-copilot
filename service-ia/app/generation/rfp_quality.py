@@ -136,6 +136,8 @@ _FACTUAL_VALUE_PATTERNS = (
     re.compile(r"\b\d{1,2}/\d{1,2}/\d{2,4}\b"),
     re.compile(r"\b\d+[.,]?\d*\s*(?:k€|m€|€|eur|ke?ur|meur)\b", re.IGNORECASE),
     re.compile(r"\b(?:24/7|24h/24|7j/7|5j/7)\b", re.IGNORECASE),
+    re.compile(r"\b[A-Z][a-z]+(?:\s+[A-Z][a-z]+)+\b"), # Capitalized named entities
+    re.compile(r"\b[A-Z]{3,}\b"), # Acronyms or ALL CAPS words like NOVASHIELD
 )
 _STOP_WORDS = {"avec", "dans", "pour", "par", "des", "les", "une", "sur", "de", "du", "la", "le", "et", "est", "sont", "nos", "notre", "votre"}
 
@@ -212,6 +214,14 @@ def validate_section(section: RfpSection, allowed_evidence_ids: list[str] | dict
         if not any(evidence_id.lower() == aid.lower() for aid in allowed_ids):
             warnings.append(f"Preuve inconnue ou non autorisée : {evidence_id}")
 
+    # Malformed citation check
+    all_brackets = re.findall(r"\[([^\]]+)\]", combined_text)
+    for bracket in all_brackets:
+        bracket = bracket.strip()
+        if bracket.lower().startswith("pdf") or bracket.isdigit() or "pdf" in bracket.lower():
+            if not re.match(r"^pdf-\d+$", bracket, re.IGNORECASE):
+                warnings.append(f"Citation canonique invalide (malformée) : [{bracket}]")
+
     for marker in raw_markers:
         if not any(marker.lower() == aid.lower() for aid in allowed_ids):
             warnings.append(f"Citation canonique invalide ou orpheline : [{marker}]")
@@ -234,12 +244,31 @@ def validate_section(section: RfpSection, allowed_evidence_ids: list[str] | dict
         for pattern in _FACTUAL_VALUE_PATTERNS:
             for match in pattern.finditer(sentence):
                 value = match.group(0)
+                # Ignore common words that might match uppercase patterns
+                if value.lower() in _STOP_WORDS or len(value) < 3:
+                    continue
+                # Also ignore start of sentence capitalized word unless it's an acronym
+                if value.istitle() and not " " in value and len(value) < 5:
+                    continue
+                    
                 normalized_value = _normalized(value)
                 if normalized_value in normalized_brief:
                     continue
+                    
                 if any(normalized_value in _normalized(quote) for quote in cited_quotes):
+                    # Check for explicit reference framing to prevent cross-case leakage
+                    reference_markers = {"référence", "exemple", "cas", "projet", "client", "chez", "avaliance", "expérience", "mission", "déjà"}
+                    sentence_words = set(_fold_text(sentence).split())
+                    if not (sentence_words & reference_markers):
+                        warnings.append(f"Valeur factuelle non sourcée ou contradictoire : {value} (cross-case leakage)")
                     continue
                 warnings.append(f"Valeur factuelle non sourcée ou contradictoire : {value}")
+                
+    # Extra check for contradictory brief facts - ensuring the original facts are preserved
+    for brief_fact in ["90%", ">800ms", "800ms"]:
+        if brief_fact in original_brief and not brief_fact in section.body and any(w in section.body for w in ["latence", "faux", "positif", "fraude"]):
+            pass # just a heuristic, we can't easily force it, but any altered number is already caught by the loop above.
+            
     return warnings
 
 
@@ -291,7 +320,7 @@ def truncate_to_budget(section: RfpSection, budget: int) -> bool:
             if b_mod:
                 modified = True
                 
-    # 3. Clean up unanchored bullets
+    # 3. Clean up unanchored bullets and limit items
     new_bullets = []
     for b in section.bullets:
         if b.anchor and b.anchor.id:
@@ -301,7 +330,27 @@ def truncate_to_budget(section: RfpSection, budget: int) -> bool:
                 new_bullets.append(b)
             else:
                 modified = True
+                
+    if len(new_bullets) > 3:
+        new_bullets = new_bullets[:3]
+        modified = True
     section.bullets = new_bullets
+    
+    if section.assumptions and len(section.assumptions) > 2:
+        section.assumptions = section.assumptions[:2]
+        modified = True
+        
+    if section.assumptions_to_confirm and len(section.assumptions_to_confirm) > 2:
+        section.assumptions_to_confirm = section.assumptions_to_confirm[:2]
+        modified = True
+        
+    if section.questions and len(section.questions) > 3:
+        section.questions = section.questions[:3]
+        modified = True
+        
+    if section.evidence and len(section.evidence) > 4:
+        section.evidence = section.evidence[:4]
+        modified = True
     
     # 4. Truncate if over budget
     def current_words():

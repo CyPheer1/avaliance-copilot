@@ -7,6 +7,7 @@ export default defineConfig({
   server: {
     // Expose the development server to VS Code's forwarded browser port.
     host: '0.0.0.0',
+    port: 3000,
     proxy: {
       '/api': {
         // Use IPv4 explicitly: the backend is published on the local IPv4 interface.
