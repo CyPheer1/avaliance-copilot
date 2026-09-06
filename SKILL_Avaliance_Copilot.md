@@ -637,4 +637,281 @@ Missions similaires :
 
 The old JSON is not authoritative and may be inaccurate. Do not repair the production corpus to match it; replace the evaluation methodology with a new golden dataset grounded in the real PDFs currently indexed in PostgreSQL
 
-hiiiii
+---
+
+## 22. État réel de la version actuelle (audit du 6 septembre 2026)
+
+Cette section décrit le système tel qu'il existe réellement dans le dépôt à cette
+date. Elle complète les sections de conception précédentes. Une capacité est
+marquée « opérationnelle » lorsqu'elle existe dans le chemin d'exécution et qu'elle
+possède des tests ciblés. Une capacité seulement décrite dans la roadmap reste à
+construire.
+
+### 22.1 Verdict exécutif
+
+La version actuelle est un MVP RAG documentaire PDF solide et déjà structuré pour
+une démonstration locale :
+
+- React ne parle qu'au backend Spring Boot.
+- Spring Boot porte l'authentification, les rôles, l'audit, le stockage original,
+  le cycle de vie documentaire et l'orchestration.
+- FastAPI est interne, stateless et protégé par `X-Internal-Token`.
+- PostgreSQL/pgvector est la source de vérité des missions, chunks, embeddings,
+  scopes et citations.
+- Ollama est le seul moteur de génération et le modèle contractuel est exactement
+  `qwen3:8b` avec `think:false`, `OLLAMA_NUM_CTX=8192` et une limite de 1500 tokens.
+- Le retrieval de production est PDF-first : vector search + recherche française
+  `tsvector`, fusion RRF pondérée, reranking cross-encoder, fenêtres de pages et
+  conservation de l'évidence lexicale.
+- La génération ne publie pas une preuve avant validation de la source, de la
+  quote, de la citation et des spans.
+- Le frontend fournit recherche SSE annulable, citations, prévisualisation PDF,
+  administration des documents, missions, propositions RFP et utilisateurs.
+
+Le système est donc fiable sur le flux documenté et sur les scénarios PDF couverts
+par les tests. Il ne faut pas présenter cette version comme une précision sémantique
+de 100 % sur n'importe quel PDF : la validation actuelle prouve principalement la
+traçabilité et le containment textuel, pas l'entailment sémantique complet.
+
+### 22.2 Architecture réellement déployée
+
+Le `docker-compose.yml` courant contient cinq services :
+
+| Service | Responsabilité actuelle | Exposition |
+|---|---|---|
+| `postgres` | PostgreSQL 16 + pgvector, migrations Flyway et données applicatives | réseau interne seulement |
+| `ollama` | génération locale et warm-up du modèle exact configuré | réseau interne seulement |
+| `service-ia` | extraction, embeddings BGE-M3, ingestion, retrieval, reranking, génération et RFP | réseau interne seulement |
+| `backend` | API publique, JWT, autorisations, documents, audit et proxy IA | port 8080 |
+| `frontend` | React compilé et servi par Nginx, proxy `/api` vers Spring Boot | port 3000 |
+
+Les volumes nommés persistent PostgreSQL, modèles Ollama, cache Hugging Face et
+originaux documentaires. FastAPI et Ollama n'ont pas de port publié vers le poste
+client. Le GPU est demandé par défaut aux conteneurs Ollama et FastAPI ; le mode
+CPU local doit donc être considéré comme une amélioration d'infrastructure à
+finaliser, pas comme une garantie de cette configuration de base.
+
+### 22.3 Flux complet d'une question RAG
+
+1. L'utilisateur se connecte sur `/login`. Spring Security vérifie le JWT et
+    distingue `ADMIN` de `CONSULTANT`.
+2. La page Recherche envoie la question à `POST /api/search`. Le navigateur ne
+    contacte ni FastAPI, ni PostgreSQL, ni Ollama.
+3. `SearchService` ajoute l'identité de requête, écrit l'audit et appelle
+    `IaClientService` avec le token interne.
+4. FastAPI encode la requête avec BGE-M3 en 1024 dimensions.
+5. PostgreSQL exécute en parallèle une recherche pgvector et une recherche
+    française `tsvector`. Les deux listes sont fusionnées par RRF avec
+    `1 / (60 + rang)` et les poids configurés.
+6. Les candidats passent dans le cross-encoder `BAAI/bge-reranker-v2-m3`.
+    Les résultats lexicaux forts, les meilleurs résultats vectoriels et les
+    candidats RRF protégés restent dans le budget final.
+7. Pour les PDF, la sélection conserve les chunks d'une même page et peut ajouter
+    une continuation physique immédiate. Une question qui nomme un projet est
+    limitée à sa famille documentaire lorsque celle-ci est identifiable.
+8. `generate_sourced_answer` sélectionne les chunks utiles selon l'intention,
+    transmet uniquement les extraits retenus à Ollama et demande une sortie
+    structurée.
+9. La réponse est contrôlée : index de source, document, page, quote exacte,
+    citation, span et claims numériques doivent correspondre aux chunks réellement
+    récupérés. Sinon le système renvoie une abstention ou un diagnostic explicite.
+10. Spring Boot retransmet les événements SSE ; le frontend affiche le texte,
+     les citations, la confiance, le diagnostic et les métriques de durée. Une
+     annulation utilise `AbortController` et ferme le flux amont.
+
+### 22.4 Retrieval : les protections réellement présentes
+
+Le retrieval n'est pas un simple top-k vectoriel. Les protections actuelles sont :
+
+- scope `PDF` par défaut et exclusion des sources `STORED`, `PROCESSING` ou
+  `FAILED` ;
+- séparation des scopes `PDF`, `MISSION` et `LEGACY_SYNTHETIC` ;
+- embeddings BGE-M3 en dimension 1024 ;
+- recherche plein texte française avec index GIN ;
+- fusion RRF configurable et trace interne via `/retrieve/trace` ;
+- reranking cross-encoder borné pour maîtriser la latence ;
+- réserve d'évidence lexicale afin qu'un terme exact ne soit pas éliminé par le
+  reranker ;
+- sauvegarde des meilleurs rangs vectoriels/RRF ;
+- conservation des chunks voisins d'une page et de la page suivante ;
+- filtrage documentaire pour les projets explicitement nommés ;
+- scores séparés : vectoriel, lexical, RRF, reranker et pertinence bornée ;
+- traces de sélection et de latence utilisables par un évaluateur reproductible.
+
+Les fonctions principales se trouvent dans `service-ia/app/retrieval/vector_search.py`
+et les tests de non-régression dans `service-ia/tests/test_hybrid_retrieval.py`,
+`test_retrieval_scope.py`, `test_retrieve.py` et `test_reranker.py`.
+
+### 22.5 Ingestion et provenance
+
+Le workflow ADMIN de `POST /api/documents` est le suivant : stockage de l'original,
+SHA-256, statut, appel FastAPI multipart, extraction, chunking, embeddings et
+remplacement transactionnel des chunks. Les extensions supportées sont PDF textuel,
+DOCX et TXT, avec limite backend de 20 Mo et limite Nginx de 21 Mo par requête.
+
+- PDF : extraction Docling sans OCR, fallback pypdf pour texte sélectionnable,
+  conservation des pages physiques 1-based ;
+- DOCX : paragraphes et tableaux conservés ;
+- TXT : UTF-8/BOM puis fallback CP1252 ;
+- PDF chiffré, vide, illisible ou scanné sans couche texte : rejet explicite ;
+- suppression : original et chunks supprimés par cascade ;
+- citation : `document_id`, nom, page optionnelle, chunk, score et request id ;
+- relance : une source `FAILED` peut être réindexée sans perdre sa traçabilité.
+
+Les migrations Flyway actuelles sont `V1` à `V7`. `V6` convertit la colonne
+d'embedding vers la dimension BGE-M3 1024 ; cette migration est destructive pour
+les anciens vecteurs et nécessite une réindexation complète après application.
+
+### 22.6 Génération et garde-fou anti-hallucination
+
+Tous les appels Ollama passent par `service-ia/app/generation/ollama.py` : modèle
+configuré sans fallback implicite, `think:false`, température zéro, contexte borné,
+`num_predict` borné et retry limité aux timeouts. La readiness échoue si le tag
+exact n'existe pas ou si le warm-up ne répond pas.
+
+La couche `service.py` combine :
+
+- sortie JSON structurée ;
+- validation des indices de sources et des citations ;
+- containment de quote dans le texte source ;
+- validation des offsets/spans et des claims numériques ;
+- réponses extractives déterministes pour certains formats de tableaux et
+  intentions fréquentes ;
+- diagnostics `NO_RELEVANT_EVIDENCE`, `UNSUPPORTED_ANSWER` et
+  `INVALID_CITATION_FORMAT` ;
+- réponse canonique d'information insuffisante quand la preuve n'est pas sûre.
+
+Cette conception est particulièrement forte pour empêcher une réponse non sourcée
+de passer silencieusement. Elle ne doit cependant pas être décrite comme une preuve
+d'entailment : une quote présente dans un chunk peut encore être insuffisante pour
+répondre à toutes les sous-parties d'une question composée. Ce point est une limite
+mesurée et doit rester visible dans toute soutenance ou évaluation.
+
+### 22.7 RFP et traitements longs
+
+Le flux RFP dispose de deux modes : réponse structurée synchrone et jobs durables
+en PostgreSQL. Les jobs portent le propriétaire, le rôle, une lease renouvelable,
+un nombre d'essais, une annulation et une rétention. Le worker récupère les jobs
+après redémarrage et empêche qu'un consultant lise le résultat d'un autre utilisateur.
+
+Le résultat RFP contient des sections, exigences, missions comparables, citations,
+preuves, qualité et provenance. Les contrôles de qualité couvrent structure,
+citations, isolation, réparation JSON, retries, fallback grounded et worker.
+
+### 22.8 Frontend actuel
+
+Les routes livrées sont : tableau de bord, recherche, propositions, missions,
+détail mission, documents ADMIN et utilisateurs ADMIN. Les protections de route
+existent à la fois dans React et côté Spring. La recherche est PDF-only, streamée,
+annulable et affiche premier token, durée, citations et abstention. L'administration
+permet drag-and-drop, validation 20 Mo, pagination, statuts, retry, téléchargement
+et confirmation de suppression.
+
+### 22.9 Matrice de maturité honnête
+
+| Domaine | État actuel | Preuve ou remarque |
+|---|---|---|
+| Auth JWT et rôles | opérationnel | filtres Spring, routes protégées, tests backend |
+| Proxy frontend -> backend -> IA | opérationnel | `IaClientService`, token interne, aucun accès direct du navigateur |
+| Ingestion PDF/DOCX/TXT | opérationnel | extracteurs, provenance et tests ciblés |
+| PostgreSQL + pgvector + tsvector | opérationnel | Flyway V1-V7, HNSW, dimension 1024 |
+| Hybrid retrieval PDF | opérationnel | RRF, reranker, réserves lexicales, trace et tests |
+| Citations et anti-hallucination | opérationnel avec limite connue | containment/spans validés ; entailment non complet |
+| SSE et annulation | opérationnel | backend WebClient, Nginx no-buffer, AbortController |
+| Similar missions | opérationnel | SQL + similarité sémantique sur corpus mission |
+| RFP structuré et jobs | opérationnel | sections, leases, isolation, qualité et retry |
+| Corpus synthétique | présent | générateur et manifest présents ; seed live à vérifier par environnement |
+| Golden PDF fondé sur PostgreSQL live | à refaire | `benchmarks/rag-final.json` est ancien et non autoritatif |
+| Fine-tuning ML mMARCO/BOAMP | à construire | répertoire `ml/` et artefacts annoncés absents |
+| Déploiement CPU local garanti | à renforcer | compose/image actuels demandent GPU par défaut |
+| README racine et guide AWS | à compléter | les README backend/frontend existent, pas le guide racine attendu |
+
+### 22.10 Ce que signifie « RAG proche de 100 % »
+
+La cible réaliste n'est pas d'afficher artificiellement `100 %`. La qualité doit
+être démontrée séparément sur quatre axes :
+
+1. **Retrieval** : le bon document, la bonne page et les bons chunks entrent dans
+    le contexte ;
+2. **Grounding** : chaque affirmation publiée possède une preuve et une citation ;
+3. **Coverage** : toutes les sous-questions de la demande sont couvertes, ou le
+    système s'abstient ;
+4. **Robustesse** : absence de fuite entre utilisateurs, documents ou projets,
+    avec latence et erreurs mesurées.
+
+La méthode correcte pour l'atteindre est de générer un golden PDF exclusivement à
+partir de `source_document` et `doc_chunk` présents dans la base live : pour chaque
+cas, enregistrer SHA-256, document, page, chunk, quote exacte, fragments attendus,
+fragments interdits et règle d'abstention. L'ancien `benchmarks/rag-final.json`, qui
+référence `Avaliance_Questions_Reponses_Claires.md` et affiche des scores faibles,
+ne doit ni piloter le corpus ni être utilisé comme preuve finale.
+
+### 22.11 Priorités d'amélioration
+
+1. Générer et versionner le golden PDF depuis PostgreSQL live, puis publier un
+    rapport retrieval/generation/citation/abstention avec latence.
+2. Remplacer les hypothèses propres à certains documents par des règles génériques
+    de navigation de pages et de tables ; garder les heuristiques connues derrière
+    des tests de régression explicites.
+3. Ajouter la couverture de sous-questions et une validation sémantique mesurée,
+    sans présenter le simple containment comme de l'entailment.
+4. Fournir un override CPU reproductible et documenter séparément la cible GPU.
+5. Ajouter les artefacts ML réellement promis : provenance/licences, splits sans
+    fuite, notebook de fine-tuning et modèle chargeable.
+6. Compléter le README racine, le guide AWS et les commandes Makefile réellement
+    disponibles.
+
+Ces priorités renforcent les points forts actuels sans fragiliser les contrats
+publics : PDF par défaut, provenance stricte, modèle `qwen3:8b`, confidentialité,
+abstention et séparation frontend/backend/IA restent non négociables.
+
+### 22.12 Lecture de la capture du Dashboard
+
+La capture fournie montre une preuve visuelle importante de la maturité opérationnelle
+du produit :
+
+- `107` missions capitalisées sur `5` secteurs ;
+- `3 767` opérations sur les `30` derniers jours ;
+- `4 495` recherches affichées dans le contexte d'activité ;
+- `98,1 %` de taux de réussite et `80` erreurs ;
+- `18,8 s` de temps de réponse moyen ;
+- une activité séparée entre recherche, similarité et proposition ;
+- une ventilation du corpus par secteurs et types d'intervention.
+
+Le point essentiel est la définition technique de ce KPI. Le backend calcule le
+`successRate` dans `DashboardService` avec :
+
+```text
+successRate = audit_log.successes / audit_log.total * 100
+```
+
+Le taux `98,1 %` signifie donc : **98,1 % des opérations auditées ont terminé sans
+erreur technique** sur la période affichée. C'est une très bonne preuve de
+stabilité du produit, de disponibilité du pipeline et de qualité de l'orchestration
+Spring Boot -> FastAPI -> PostgreSQL/Ollama.
+
+Il ne faut pas le reformuler automatiquement comme : « le modèle répond correctement
+à 98,1 % des questions ». Une opération peut être techniquement réussie tout en
+retournant une abstention correcte, une réponse partiellement couverte ou une
+réponse dont la qualité sémantique doit encore être évaluée. La capture prouve donc
+la **fiabilité opérationnelle**, pas à elle seule la **précision RAG**.
+
+Pour annoncer honnêtement que le modèle répond correctement à environ 98 % des
+questions, il faut un second KPI calculé par un évaluateur golden indépendant, avec
+au minimum :
+
+1. une liste de questions issues des PDF réellement indexés ;
+2. les documents, pages, chunks et quotes attendus ;
+3. une règle séparée pour les questions qui doivent produire une abstention ;
+4. une vérification de retrieval, de citation, de couverture des sous-questions et
+    d'exactitude factuelle ;
+5. le dénominateur exact, le nombre de cas réussis et les erreurs détaillées.
+
+Le message de soutenance recommandé est donc : **« Le Dashboard montre 98,1 % de
+succès opérationnel sur les requêtes auditées. La précision des réponses RAG est
+mesurée séparément par le golden PDF et ne doit pas être déduite de ce KPI. »**
+
+Cette distinction renforce la crédibilité du projet : elle met en valeur le point
+fort réel de l'application, à savoir un pipeline stable, traçable et sourcé, tout
+en évitant de présenter un indicateur de disponibilité comme une mesure de vérité
+du modèle.
